@@ -18,8 +18,8 @@
 
 #define incr 0.3
 
-#define rad_circles 3
-#define num_circles 20
+#define rad_circles 2
+#define num_circles 2
 
 #define FOR(i,n,inc) for( i = -n; i < n; i=i+inc)
 
@@ -48,10 +48,13 @@ __global__ void add( point3D* points, point3D* circles, point3D* intersection){
 	int index = threadIdx.x + blockIdx.x*blockDim.x;
 
 	//if( circles[index].x != -1 && circles[index].y != -1 && circles[index].z != -1 ){
-	for( int i = 0 ; i < num_circles; i++){
 
-		double dif_x, dif_y, dif_z, value=0.0, thresh = 0.01;
-		
+	double sum = 0.0, sum2 = 0.0;
+
+	double dif_x, dif_y, dif_z, value=0.0, thresh = 0.1;
+
+	for( int i = 0 ; i < num_circles; i++){
+			
 		dif_x = (points[index].x - circles[i].x);
 		dif_y = (points[index].y - circles[i].y);
 		dif_z = (points[index].z - circles[i].z);
@@ -60,22 +63,69 @@ __global__ void add( point3D* points, point3D* circles, point3D* intersection){
 		
 		value = sqrt( dif_x*dif_x + dif_y*dif_y + dif_z*dif_z );
 
+		//sum = value * value;
 		//printf("%d\n", value);
 		
-		if( value < rad_circles){
+		if( value < rad_circles ){
 
-			value = 1 - ( (value*value) / (rad_circles*rad_circles) );
+			value = 1 - ( (value*value) / (rad_circles*rad_circles) );			
 
-			if( value * value < thresh){
+			sum = sum + (value * value);			
+
+			if( sum < thresh ){
+				intersection[index].x = points[index].x;
+				intersection[index].y = points[index].y;
+				intersection[index].z = points[index].z;
+			}	
+		}
+
+		dif_x = intersection[index].x - circles[i].x;
+		dif_y = intersection[index].y - circles[i].y;
+		dif_z = intersection[index].z - circles[i].z;
+
+		value = sqrt( dif_x*dif_x + dif_y*dif_y + dif_z*dif_z );
+
+		if( value < rad_circles ){
+
+			value = 1 - ( (value * value) / (rad_circles * rad_circles) );			
+			value = value * value;
+			
+			sum2 = sum2 + (value * value);			
+
+			if( sum < thresh  ){				
+			}
+			else{
+				intersection[index].x = intersection[index].y = intersection[index].z = -1;
+			}
+		}
+
+
+	}
+/*
+	sum = 0.0;
+
+	for( int i = 1 ; i < num_circles; i++){
+		dif_x = circles[i-1].x - circles[i].x;
+		dif_y = circles[i-1].y - circles[i].y;
+		dif_z = circles[i-1].z - circles[i].z;
+
+		value = sqrt( dif_x*dif_x + dif_y*dif_y + dif_z*dif_z );
+
+		if( value < rad_circles ){
+
+			value = 1 - ( (value * value) / (rad_circles * rad_circles) );			
+			value = value * value;
+			
+			sum = sum + (value * value);			
+
+			if( sum < thresh - 0.48 ){
 				intersection[index].x = points[index].x;
 				intersection[index].y = points[index].y;
 				intersection[index].z = points[index].z;
 			}
 		}
-
-	}
-
-	
+	}	
+	*/
 }
 
 void init_ppoint3D( point3D*& points, int size ){
@@ -125,12 +175,29 @@ int main(void){
 
     init_ppoint3D( circles, size_matrix);
 
-    for( int i = 0 ; i < num_circles ; i++){
-		circles[i].x = ( i * i ) / 5;
-		circles[i].y = ( i + 1 ) * ( i + 1) / 5;
-		circles[i].z = ( i + 2 ) * ( i + 2) / 5;
+    //int position = dim1 / num_circles;
+
+    circles[0] = point3D( -4, -4, -4);
+    circles[1] = point3D( -1.5, -3, -1.4);
+
+    //circles[0] = point3D( -6, -6, -6);
+	//circles[1] = point3D( -8, -8,  0);
+    /*circles[2] = point3D( -6,  -6, -6);
+    circles[3] = point3D( -8,  0,  0);
+    
+    circles[4] = point3D(  0, -8, -8);
+    circles[5] = point3D(  0, -8,  0);
+    circles[6] = point3D(  0,  0, -8);
+    circles[7] = point3D(  0,  0,  0);
+    */
+
+
+    /*for( int i = 0 ; i < num_circles ; i++){
+		circles[i].x = i;
+		circles[i].y = i;
+		circles[i].z = i;
 	}
-	
+	*/
     int index = 0;
     
     cout << "Filling vectors" << endl;
@@ -206,7 +273,7 @@ int main(void){
 		}
 	}
 
-	std::cout << std::endl;
+	cout << std::endl;
 
 	// Cleanup
 	free(points);
