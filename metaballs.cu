@@ -9,17 +9,17 @@
 
 #define space 15
 
-#define dim1 10		//X 	 
-#define dim2 10 	//Y
-#define dim3 10 	//Z
+#define dim1 100		//X 	 
+#define dim2 100 	//Y
+#define dim3 100 	//Z
 
 #define N ( 100000 )
 #define M ( 512 )
 
-#define incr 0.3
+#define incr 1
 
-#define rad_circles 2
-#define num_circles 2
+#define rad_circles 1
+#define num_circles 1000
 
 #define FOR(i,n,inc) for( i = -n; i < n; i=i+inc)
 
@@ -49,9 +49,9 @@ __global__ void add( point3D* points, point3D* circles, point3D* intersection){
 
 	//if( circles[index].x != -1 && circles[index].y != -1 && circles[index].z != -1 ){
 
-	double sum = 0.0, sum2 = 0.0;
+	double sum = 0.0;//, sum2 = 0.0;
 
-	double dif_x, dif_y, dif_z, value=0.0, thresh = 0.1;
+	double dif_x, dif_y, dif_z, value=0.0, thresh = 0.2;
 
 	for( int i = 0 ; i < num_circles; i++){
 			
@@ -66,39 +66,39 @@ __global__ void add( point3D* points, point3D* circles, point3D* intersection){
 		//sum = value * value;
 		//printf("%d\n", value);
 		
-		if( value < rad_circles ){
+		if( value <= rad_circles ){
 
 			value = 1 - ( (value*value) / (rad_circles*rad_circles) );			
 
 			sum = sum + (value * value);			
 
-			if( sum < thresh ){
+			if( sum > thresh ){
 				intersection[index].x = points[index].x;
 				intersection[index].y = points[index].y;
 				intersection[index].z = points[index].z;
 			}	
 		}
 
-		dif_x = intersection[index].x - circles[i].x;
+		/*dif_x = intersection[index].x - circles[i].x;
 		dif_y = intersection[index].y - circles[i].y;
 		dif_z = intersection[index].z - circles[i].z;
 
 		value = sqrt( dif_x*dif_x + dif_y*dif_y + dif_z*dif_z );
 
-		if( value < rad_circles ){
+		if( value <= rad_circles ){
 
 			value = 1 - ( (value * value) / (rad_circles * rad_circles) );			
 			value = value * value;
 			
 			sum2 = sum2 + (value * value);			
 
-			if( sum < thresh  ){				
+			if( sum > thresh  ){				
 			}
 			else{
 				intersection[index].x = intersection[index].y = intersection[index].z = -1;
 			}
 		}
-
+*/
 
 	}
 /*
@@ -176,21 +176,32 @@ int main(void){
     init_ppoint3D( circles, size_matrix);
 
     //int position = dim1 / num_circles;
-
+/*
     circles[0] = point3D( -4, -4, -4);
     circles[1] = point3D( -1.5, -3, -1.4);
 
     //circles[0] = point3D( -6, -6, -6);
 	//circles[1] = point3D( -8, -8,  0);
-    /*circles[2] = point3D( -6,  -6, -6);
+    circles[2] = point3D( -6,  -6, -6);
     circles[3] = point3D( -8,  0,  0);
     
     circles[4] = point3D(  0, -8, -8);
     circles[5] = point3D(  0, -8,  0);
     circles[6] = point3D(  0,  0, -8);
     circles[7] = point3D(  0,  0,  0);
-    */
+  */ 
 
+	default_random_engine rng( random_device{}() ); 
+    uniform_int_distribution<int> dist(-dim1, dim1); 
+	
+	for( int i = 0 ; i < num_circles; i++){
+		int xr, yr, zr;
+		xr = dist(rng);
+		yr = dist(rng);
+		zr = dist(rng);
+
+    	circles[i] = point3D( xr, yr, zr);
+	}
 
     /*for( int i = 0 ; i < num_circles ; i++){
 		circles[i].x = i;
@@ -204,9 +215,9 @@ int main(void){
 
 
 	
-	for( double i = -dim1; i < dim1; i=i+incr){
-		for( double j = -dim2; j < dim2; j=j+incr){
-			for( double k = -dim3; k < dim3; k=k+incr){
+	for( double i = -dim1 ; i < dim1 ; i=i+incr){
+		for( double j = -dim2 ; j < dim2 ; j=j+incr){
+			for( double k = -dim3 ; k < dim3 ; k=k+incr){
 				
 			 	points[index].x = i ;
 				points[index].y = j ;
