@@ -82,6 +82,22 @@ int main(void)
 	sun.loadMesh("data/models/sphere.obj");
 	sun.setColorTexture("data/textures/colorSun.png", "myTextureSampler");
 	sun.setModelMatrix(scale(sun.getModelMatrix(), vec3(0.3, 0.3, 0.3)));
+
+	Mesh sun2("Shaders/TransformVertexShader.vertexshader", "Shaders/TextureFragmentShader.fragmentshader");
+	sun2.loadMesh("data/models/sphere.obj");
+	sun2.setColorTexture("data/textures/colorSun.png", "myTextureSampler");
+	sun2.setModelMatrix(scale(sun2.getModelMatrix(), vec3(0.1, 0.1, 0.1)));
+
+	Mesh sun3("Shaders/TransformVertexShader.vertexshader", "Shaders/TextureFragmentShader.fragmentshader");
+	sun3.loadMesh("data/models/sphere.obj");
+	sun3.setColorTexture("data/textures/colorSun.png", "myTextureSampler");
+	sun3.setModelMatrix(scale(sun3.getModelMatrix(), vec3(0.1, 0.1, 0.1)));
+
+	Mesh sun4("Shaders/TransformVertexShader.vertexshader", "Shaders/TextureFragmentShader.fragmentshader");
+	sun4.loadMesh("data/models/sphere.obj");
+	sun4.setColorTexture("data/textures/colorSun.png", "myTextureSampler");
+	sun4.setModelMatrix(scale(sun4.getModelMatrix(), vec3(0.1, 0.1, 0.1)));
+	sun4.setModelMatrix(translate(sun4.getModelMatrix(), vec3(2, 2, 2)));
 	
 	//Moon
 	Mesh moon("Shaders/TransformVertexShader.vertexshader", "Shaders/TextureFragmentShader.fragmentshader");
@@ -96,7 +112,7 @@ int main(void)
 	double lastTime = glfwGetTime();
 
 	double coordx = 0;
-	double r = 0.5;
+	double r = 0.3;
 	double r2 = 0.2;
 	do
 	{
@@ -120,6 +136,20 @@ int main(void)
 		sun.setModelMatrix(rotate(sun.getModelMatrix(), speed*float(delta), vec3(0, 1, 0)));
 		MVP = ProjectionMatrix * ViewMatrix * sun.getModelMatrix();
 		sun.draw(MVP);
+
+		sun2.setModelMatrix(rotate(sun2.getModelMatrix(), speed*float(delta), vec3(0, 1, 0)));
+		MVP = ProjectionMatrix * ViewMatrix * sun2.getModelMatrix();
+		sun.draw(MVP);
+
+		sun3.setModelMatrix(rotate(sun3.getModelMatrix(), speed*float(delta), vec3(0, 1, 0)));
+		sun3.setModelMatrix(translate(sun3.getModelMatrix(), vec3(0,2, 2)));
+		MVP = ProjectionMatrix * ViewMatrix * sun3.getModelMatrix();
+		sun3.draw(MVP);
+
+		sun4.setModelMatrix(rotate(sun.getModelMatrix(), speed*float(delta), vec3(0, 1, 0)));
+		sun4.setModelMatrix(translate(sun4.getModelMatrix(), vec3(2, 2, 2)));
+		MVP = ProjectionMatrix * ViewMatrix * sun4.getModelMatrix();
+		sun4.draw(MVP);
 
 
 		//Moon
