@@ -112,7 +112,7 @@ int main(void)
 	double lastTime = glfwGetTime();
 
 	double coordx = 0;
-	double r = 0.3;
+	double r = 0.1;
 	double r2 = 0.2;
 	do
 	{
@@ -137,12 +137,13 @@ int main(void)
 		MVP = ProjectionMatrix * ViewMatrix * sun.getModelMatrix();
 		sun.draw(MVP);
 
-		sun2.setModelMatrix(rotate(sun2.getModelMatrix(), speed*float(delta), vec3(0, 1, 0)));
+		/*sun2.setModelMatrix(rotate(sun2.getModelMatrix(), speed*float(delta), vec3(0, 1, 0)));
+		sun2.setModelMatrix(translate(sun3.getModelMatrix(), vec3(0,0, 2)));
 		MVP = ProjectionMatrix * ViewMatrix * sun2.getModelMatrix();
-		sun.draw(MVP);
+		sun2.draw(MVP);
 
 		sun3.setModelMatrix(rotate(sun3.getModelMatrix(), speed*float(delta), vec3(0, 1, 0)));
-		sun3.setModelMatrix(translate(sun3.getModelMatrix(), vec3(0,2, 2)));
+		sun3.setModelMatrix(translate(sun3.getModelMatrix(), vec3(0,0,0)));
 		MVP = ProjectionMatrix * ViewMatrix * sun3.getModelMatrix();
 		sun3.draw(MVP);
 
@@ -150,17 +151,17 @@ int main(void)
 		sun4.setModelMatrix(translate(sun4.getModelMatrix(), vec3(2, 2, 2)));
 		MVP = ProjectionMatrix * ViewMatrix * sun4.getModelMatrix();
 		sun4.draw(MVP);
-
+*/
 
 		//Moon
-		if (double(1-coordx) < 0.01) {
+		if (double(coordx) < 0.15) {
 			coordx = 0;
 		}
 		coordx += 0.01;
 
 		cout << std::sin(coordx) << " ";
 		moon.setModelMatrix(rotate(moon.getModelMatrix(), speed*float(delta), vec3(0, 1, 0)));
-		moon.setModelMatrix(translate(moon.getModelMatrix(), vec3( double(r*std::sin(coordx)) , 0, 0)));
+		moon.setModelMatrix(translate(moon.getModelMatrix(), vec3( double(r*std::cos(coordx)) , double(r*std::sin(coordx)), 0)));
 		MVP = ProjectionMatrix * ViewMatrix * moon.getModelMatrix();
 		moon.draw(MVP);
 
