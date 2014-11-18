@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <iostream>
 
 #include <vector>
 #include <algorithm>
@@ -12,7 +13,6 @@ GLFWwindow* window;
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/norm.hpp>
-#include <iostream>
 using namespace glm;
 using namespace std;
 
@@ -38,6 +38,7 @@ int main(void)
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Open a window and create its OpenGL context
+	//window = glfwCreateWindow(1800, 1200, "Taller - Basics", NULL, NULL);
 	window = glfwCreateWindow(1024, 768, "Taller - Basics", NULL, NULL);
 	if (window == NULL){
 		fprintf(stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n");
@@ -71,24 +72,61 @@ int main(void)
 
 	vec3 lightPos = vec3(4, 8, 4);
 
+
+	double k = 0.5;
+
 	//Earth
 	Mesh sphere("Shaders/TransformVertexShader.vertexshader", "Shaders/TextureFragmentShader.fragmentshader");
 	sphere.loadMesh("data/models/sphere.obj");
 	sphere.setColorTexture("data/textures/colorEarth.png", "myTextureSampler");
+	sphere.setModelMatrix(scale(sphere.getModelMatrix(), vec3(0.1*k, 0.1*k, 0.1*k)));
 	// sphere.setModelMatrix(rotate(sphere.getModelMatrix(), -23.0f, vec3(0, 0, 1)));
+
+	Mesh sun("Shaders/TransformVertexShader.vertexshader", "Shaders/TextureFragmentShader.fragmentshader");
+	sun.loadMesh("data/models/sphere.obj");
+	sun.setColorTexture("data/textures/colorSun.png", "myTextureSampler");
+	sun.setModelMatrix(scale(sun.getModelMatrix(), vec3(0.3*k, 0.3*k, -1.2*k)));
+/*
+	Mesh sun2("Shaders/TransformVertexShader.vertexshader", "Shaders/TextureFragmentShader.fragmentshader");
+	sun2.loadMesh("data/models/sphere.obj");
+	sun2.setColorTexture("data/textures/colorSun.png", "myTextureSampler");
+	sun2.setModelMatrix(scale(sun2.getModelMatrix(), vec3(0.1, 0.1, 0.1)));
+
+	Mesh sun3("Shaders/TransformVertexShader.vertexshader", "Shaders/TextureFragmentShader.fragmentshader");
+	sun3.loadMesh("data/models/sphere.obj");
+	sun3.setColorTexture("data/textures/colorSun.png", "myTextureSampler");
+	sun3.setModelMatrix(scale(sun3.getModelMatrix(), vec3(0.1, 0.1, 0.1)));
+
+	Mesh sun4("Shaders/TransformVertexShader.vertexshader", "Shaders/TextureFragmentShader.fragmentshader");
+	sun4.loadMesh("data/models/sphere.obj");
+	sun4.setColorTexture("data/textures/colorSun.png", "myTextureSampler");
+	sun4.setModelMatrix(scale(sun4.getModelMatrix(), vec3(0.1, 0.1, 0.1)));
+	sun4.setModelMatrix(translate(sun4.getModelMatrix(), vec3(2, 2, 2)));
+*/	
 	//Moon
 	Mesh moon("Shaders/TransformVertexShader.vertexshader", "Shaders/TextureFragmentShader.fragmentshader");
 	moon.loadMesh("data/models/sphere.obj");
 	moon.setColorTexture("data/textures/colorMoon.png", "myTextureSampler");
-	moon.setModelMatrix(translate(moon.getModelMatrix(), vec3(2, 0, 0)));
-	moon.setModelMatrix(scale(moon.getModelMatrix(), vec3(0.5, 0.5, 0.5)));
+	moon.setModelMatrix(translate(moon.getModelMatrix(), vec3(0.05, 0, 0)));
+	moon.setModelMatrix(scale(moon.getModelMatrix(), vec3(0.02*k, 0.02*k, 0.02*k)));
 
-	float speed = 10.0f;
+	float speed = 30.0f;
 
 
 	double lastTime = glfwGetTime();
+
+	double coordx = 0;
+	double r = 0.1;
+	double rearth = 0.06;
+	double rmoon = 0.05;
 	do
 	{
+
+		if (double(coordx) < 0.15) {
+			coordx = 0;
+		}
+		coordx += 0.01;
+
 		// Clear the screen
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		// time between two frames
@@ -96,25 +134,42 @@ int main(void)
 		double delta = currentTime - lastTime;
 		lastTime = currentTime;
 		// Compute the MVP matrix from keyboard and mouse input
-		computeMatricesFromInputs();
+		//computeMatricesFromInputs();
 		mat4 ProjectionMatrix = getProjectionMatrix();
 		mat4 ViewMatrix = getViewMatrix();
-
-		/*for( int i = 0 ; i < 4 ; i++){
-			for( int j = 0 ; j < 4 ; j++){
-				cout << ProjectionMatrix[i][j];
-			}
-		}*/
-
 		//Earth
 		sphere.setModelMatrix(rotate(sphere.getModelMatrix(), speed*float(delta), vec3(0, 1, 0)));
+		sphere.setModelMatrix(translate(sphere.getModelMatrix(), vec3( double(rearth*std::cos(coordx)), double(-rearth*std::sin(coordx)), 0)));
 		mat4 MVP = ProjectionMatrix * ViewMatrix * sphere.getModelMatrix();
 		sphere.draw(MVP);
-		
-		//Moon
-		%moon.setModelMatrix(rotate(moon.getModelMatrix(), speed*float(delta), vec3(0, 1, 0)));
-		moon.setModelMatrix(rotate(moon.getModelMatrix(), speed*float(delta), vec3(0, 5, 0)));
 
+		//Sun
+		sun.setModelMatrix(rotate(sun.getModelMatrix(), speed*float(delta), vec3(0, 1, 0)));
+		MVP = ProjectionMatrix * ViewMatrix * sun.getModelMatrix();
+		sun.draw(MVP);
+
+		/*sun2.setModelMatrix(rotate(sun2.getModelMatrix(), speed*float(delta), vec3(0, 1, 0)));
+		sun2.setModelMatrix(translate(sun3.getModelMatrix(), vec3(0,0, 2)));
+		MVP = ProjectionMatrix * ViewMatrix * sun2.getModelMatrix();
+		sun2.draw(MVP);
+
+		sun3.setModelMatrix(rotate(sun3.getModelMatrix(), speed*float(delta), vec3(0, 1, 0)));
+		sun3.setModelMatrix(translate(sun3.getModelMatrix(), vec3(0,0,0)));
+		MVP = ProjectionMatrix * ViewMatrix * sun3.getModelMatrix();
+		sun3.draw(MVP);
+
+		sun4.setModelMatrix(rotate(sun.getModelMatrix(), speed*float(delta), vec3(0, 1, 0)));
+		sun4.setModelMatrix(translate(sun4.getModelMatrix(), vec3(2, 2, 2)));
+		MVP = ProjectionMatrix * ViewMatrix * sun4.getModelMatrix();
+		sun4.draw(MVP);
+*/
+
+		//Moon
+		
+
+		//cout << std::sin(coordx) << " ";
+		moon.setModelMatrix(rotate(moon.getModelMatrix(), speed*float(delta), vec3(0, 1, 0)));
+		moon.setModelMatrix(translate(moon.getModelMatrix(), vec3( double(rmoon*std::cos(coordx)) , double(-rmoon*std::sin(coordx)), 0)));
 		MVP = ProjectionMatrix * ViewMatrix * moon.getModelMatrix();
 		moon.draw(MVP);
 
