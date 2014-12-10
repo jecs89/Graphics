@@ -25,7 +25,8 @@ struct fish
 	float w_a;		//attraction weight
 	float w_o;		//orientation weight
 
-	vector<int> neighborhood;	//k neighbors
+	vector<int> neighborhood_r;	//neighbors in repulsion zone
+	vector<int> neighborhood_p; //neighbors in annulus r_r & r_p
 };
 
 template <typename T>
@@ -154,19 +155,22 @@ class SchoolFish{
 				vector<float> v_dist = ( v_norm(i) );
 
 				for( int j = 0; j < v_dist.size(); ++j){
-					if( schoolfish[i].neighborhood.size() < k ){
-						if( (v_dist[j] <= schoolfish[i].r_r || v_dist[j] <= schoolfish[i].r_p) ){
+					int act_size = schoolfish[i].neighborhood_r.size()+ schoolfish[i].neighborhood_p.size();
+					if( act_size < k ){
+						if( v_dist[j] <= schoolfish[i].r_r ){
 							if( schoolfish[i].num != j ){
-								schoolfish[i].neighborhood.push_back( j );
+								schoolfish[i].neighborhood_r.push_back( j );
 								// cout << j << "\t";
 							}
-							// else{
-							// 	schoolfish[i].neighborhood.push_back( schoolfish[i].num );
-							// 	cout << schoolfish[i].num << "\t";
-							// }
+						}
+						else if( v_dist[j] > schoolfish[i].r_r && v_dist[j] <= schoolfish[i].r_p ){
+							if( schoolfish[i].num != j ){
+								schoolfish[i].neighborhood_p.push_back( j );
+								// cout << j << "\t";
+							}
 						}
 					}
-					else if( schoolfish[i].neighborhood.size() == k ){
+					else if( act_size == k ){
 						break;
 					}
 				}
@@ -177,7 +181,8 @@ class SchoolFish{
 		void print_neighboors(){
 			for( int i = 0; i < schoolfish.size(); ++i){
 				cout << "Fish " << i << endl;
-				printelem( schoolfish[i].neighborhood );
+				printelem( schoolfish[i].neighborhood_r);
+				printelem( schoolfish[i].neighborhood_p);
 			}
 
 		}
@@ -186,14 +191,30 @@ class SchoolFish{
 			for( int i = 0; i < schoolfish.size(); ++i){
 				pair<float,float> d(0,0);
 
-				for( int j = 0; j < schoolfish[i].neighborhood.size(); ++j){
-					int ii = schoolfish[i].num, jj = schoolfish[i].neighborhood[j];
-					float den = calc_norm( schoolfish[ii].c, schoolfish[jj].c );
-					d.first +=  ( schoolfish[jj].c.first - schoolfish[ii].c.first ) / ( den );
-					d.second +=  ( schoolfish[jj].c.second - schoolfish[ii].c.second ) / ( den );	
+				if( schoolfish[i].neighborhood_r.size() > 0 ){
+					for( int j = 0; j < schoolfish[i].neighborhood_r.size(); ++j){
+						int ii = schoolfish[i].num, jj = schoolfish[i].neighborhood_r[j];
+						float den = calc_norm( schoolfish[ii].c, schoolfish[jj].c );
+						d.first +=  ( schoolfish[jj].c.first - schoolfish[ii].c.first ) / ( den );
+						d.second +=  ( schoolfish[jj].c.second - schoolfish[ii].c.second ) / ( den );	
+					}
+					d.first = -1 * d.first; d.second = -1 * d.second;
+				}
+				else{
+					for( int j = 0; j < schoolfish[i].neighborhood_r.size(); ++j){
+						int ii = schoolfish[i].num, jj = schoolfish[i].neighborhood_r[j];
+						float den = calc_norm( schoolfish[ii].c, schoolfish[jj].c );
+
+						int norm_v = (schoolfish[i].v.first / sqrtf( powf(schoolfish[i].v.first,2) + powf(schoolfish[i].v.second,2) ) );
+
+						d.first +=  ( schoolfish[jj].c.first - schoolfish[ii].c.first ) / ( den ) + norm_v;
+						d.second +=  ( schoolfish[jj].c.second - schoolfish[ii].c.second ) / ( den ) + norm_v;	
+					}
+					d.first = -1 * d.first; d.second = -1 * d.second;
+
 				}
 
-				d.first = -1 * d.first; d.second = -1 * d.second;
+				
 
 				if( calc_angle( schoolfish[i].c, d ) <= schoolfish[i].theta ){
 					 schoolfish[i].c.first = schoolfish[i].c.first + schoolfish[i].s * d.first;
