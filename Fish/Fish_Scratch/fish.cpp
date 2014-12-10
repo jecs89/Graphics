@@ -29,7 +29,7 @@ struct fish
 };
 
 template <typename T>
-void printelem( T elem){
+void printelem( T elem ){
 	// cout << sizeof(elem) << endl;
 	// cout << sizeof(elem[0]) << endl;
 	if( sizeof(elem) == 1 || sizeof(elem) == 2 || sizeof(elem) == 4 ){
@@ -57,6 +57,30 @@ void printelem( T elem){
 	}
 }
 
+// template <typename T, typename V>
+// double calc_di( vector<T> vec, T i){
+// 	for( vector<T>::iterator it = vec.begin(); it != vec.end(); it++ ){
+
+// 	}
+// }
+
+float calc_angle( p2D x, p2D y ){
+	float den = x.first * y.first + x.second * y.second ,
+		  num = sqrtf( powf(x.first,2) + powf(x.second,2) ) + sqrtf( powf(y.first,2) + powf(y.second,2) );
+
+	return acos( den / num );
+}
+
+void test_calc_angle(){
+	p2D x ( 3, 0 ), y( 0, 3 );
+    float ang = calc_angle( x, y );
+    cout << setprecision(4) << ang << "\t" << ang*180/PI << endl;
+}
+
+float calc_norm( p2D x, p2D y){
+	return sqrtf( powf(x.first-y.first,2) + powf( x.second-y.second,2) );
+}
+
 template <typename T>
 class SchoolFish{
 	vector< fish< T > > schoolfish;
@@ -68,7 +92,8 @@ class SchoolFish{
 
 		void init(){
 			default_random_engine rng(random_device{}()); 		
-			uniform_real_distribution<float> dist( -10, 10); 
+			// uniform_real_distribution<float> dist( -10, 10); 
+			uniform_int_distribution<int> dist( -10, 10);
 
 			for( int i = 0; i < schoolfish.size(); ++i){
 				schoolfish[i].num = i;
@@ -102,8 +127,8 @@ class SchoolFish{
 			}	
 		}
 
-		vector<float> norm(int pos){
-			cout << "Fish" << pos << endl;
+		vector<float> v_norm(int pos){
+			// cout << "Fish" << pos << endl;
 			vector<float> ans;
 			for( int i = 0; i < schoolfish.size(); ++i){
 				if( i != pos ){
@@ -118,29 +143,22 @@ class SchoolFish{
 			return ans;
 		}
 
-		// void calc_distances(){
-		// 	for( int i = 0; i < schoolfish.size(); ++i){			
-
-		// 		if
-
-		// 		schoolfish[i].neighborhood = norm(i) ;
-		// 		for( int j = 0; j < schoolfish[i].neighborhood.size(); ++j){
-		// 			cout << schoolfish[i].neighborhood[j] << "\t";
-		// 		}
-		// 		cout << endl;
-		// 	}
-		// }
+		void print_distances(){
+			for( int i = 0; i < schoolfish.size(); ++i){
+				printelem( v_norm(i) );
+			}
+		}
 
 		void calc_neighboors( int k ){
 			for( int i = 0; i < schoolfish.size(); ++i){
-				vector<float> v_dist = ( norm(i) );
+				vector<float> v_dist = ( v_norm(i) );
 
 				for( int j = 0; j < v_dist.size(); ++j){
 					if( schoolfish[i].neighborhood.size() < k ){
 						if( (v_dist[j] <= schoolfish[i].r_r || v_dist[j] <= schoolfish[i].r_p) ){
 							if( schoolfish[i].num != j ){
 								schoolfish[i].neighborhood.push_back( j );
-								cout << j << "\t";
+								// cout << j << "\t";
 							}
 							// else{
 							// 	schoolfish[i].neighborhood.push_back( schoolfish[i].num );
@@ -152,15 +170,41 @@ class SchoolFish{
 						break;
 					}
 				}
-				cout << endl;
+				// cout << endl;
 			}
 		}
 
-		void print_distances(){
+		void print_neighboors(){
 			for( int i = 0; i < schoolfish.size(); ++i){
-				printelem( norm(i) );
+				cout << "Fish " << i << endl;
+				printelem( schoolfish[i].neighborhood );
+			}
+
+		}
+
+		void update_c(){
+			for( int i = 0; i < schoolfish.size(); ++i){
+				pair<float,float> d(0,0);
+
+				for( int j = 0; j < schoolfish[i].neighborhood.size(); ++j){
+					int ii = schoolfish[i].num, jj = schoolfish[i].neighborhood[j];
+					float den = calc_norm( schoolfish[ii].c, schoolfish[jj].c );
+					d.first +=  ( schoolfish[jj].c.first - schoolfish[ii].c.first ) / ( den );
+					d.second +=  ( schoolfish[jj].c.second - schoolfish[ii].c.second ) / ( den );	
+				}
+
+				d.first = -1 * d.first; d.second = -1 * d.second;
+
+				if( calc_angle( schoolfish[i].c, d ) <= schoolfish[i].theta ){
+					 schoolfish[i].c.first = schoolfish[i].c.first + schoolfish[i].s * d.first;
+					 schoolfish[i].c.second = schoolfish[i].c.second + schoolfish[i].s * d.first;
+				}
 			}
 		}
+
+
+
+
 };
 
 inline void str2int(string str, int& num){
@@ -179,11 +223,14 @@ int main( int argc, char** argv ){
 
 	SchoolFish<p2D> myschool( num_fish );
 	myschool.init();
-	// myschool.print();
+	myschool.print();
 
-	// myschool.calc_distances();
 	// myschool.print_distances();
 	myschool.calc_neighboors(k);
+	// myschool.print_neighboors();
+
+	myschool.update_c();
+	myschool.print();
 
 	time_t timer2 = time(0); 
     cout <<"\nTiempo total: " << difftime(timer2, timer) << endl;
