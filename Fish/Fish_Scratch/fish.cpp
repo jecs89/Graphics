@@ -4,6 +4,8 @@
 #include <iomanip>
 #include <string>
 #include <sstream>
+#include <fstream>
+
 
 #define PI 3.1416
 
@@ -85,6 +87,7 @@ float calc_norm( p2D x, p2D y){
 template <typename T>
 class SchoolFish{
 	vector< fish< T > > schoolfish;
+	float lim1, lim2;
 
 	public:
 		SchoolFish(int size){
@@ -94,18 +97,21 @@ class SchoolFish{
 		void init(){
 			default_random_engine rng(random_device{}()); 		
 			// uniform_real_distribution<float> dist( -10, 10); 
-			uniform_int_distribution<int> dist( -10, 10);
+
+			lim1 = -10, lim2 = 10;
+			uniform_real_distribution<float> dist( lim1, lim2 );
 
 			for( int i = 0; i < schoolfish.size(); ++i){
 				schoolfish[i].num = i;
 				schoolfish[i].c = pair<float,float> ( dist(rng),dist(rng) );
-				schoolfish[i].v = pair<float,float> ( dist(rng),dist(rng) );
+				// schoolfish[i].v = pair<float,float> (2,2);
+				schoolfish[i].v = pair<float,float> (dist(rng),dist(rng) );
 				schoolfish[i].s = 0.1;
 				schoolfish[i].theta = PI/6;
-				schoolfish[i].r_r = 1.5;
-				schoolfish[i].r_p = 3.0;
+				schoolfish[i].r_r = 1.0;
+				schoolfish[i].r_p = 1.5;
 				schoolfish[i].w_a = 1;
-				schoolfish[i].w_o = 2;
+				schoolfish[i].w_o = 5;
 			}
 		}
 
@@ -128,6 +134,22 @@ class SchoolFish{
 			}	
 		}
 
+		void print2file( ostream& file, int type ){
+			int dec=4;
+			int pos=dec*2;
+			
+			//file << setw(pos) << "# Fish" << setw(pos*2) << "C" << endl;
+
+			for( int i = 0; i < schoolfish.size(); ++i){
+				if( type == 1){
+					file << setprecision(dec) << setw(pos) << schoolfish[i].num << setw(pos) << schoolfish[i].c.first << setw(pos) << schoolfish[i].c.second << endl;
+				}
+				else if( type == 2){
+					file << setprecision(dec) << schoolfish[i].c.first << "," << schoolfish[i].c.second << endl;	
+				}
+			}
+		}
+
 		vector<float> v_norm(int pos){
 			// cout << "Fish" << pos << endl;
 			vector<float> ans;
@@ -137,7 +159,7 @@ class SchoolFish{
 					ans.push_back( dist );
 				}
 				else{
-					ans.push_back( 10 );		
+					ans.push_back( 50 );		
 				}
 			}
 
@@ -227,8 +249,34 @@ class SchoolFish{
 			}
 		}
 
+		void movement( float t ){
+			for( int i = 0; i < schoolfish.size(); ++i){
+				float cx = schoolfish[i].c.first, cy = schoolfish[i].c.second;
 
+				check_limits( schoolfish[i].c, schoolfish[i].v ) ;
 
+				schoolfish[i].c.first  += schoolfish[i].v.first *schoolfish[i].s * t;
+				schoolfish[i].c.second += schoolfish[i].v.second *schoolfish[i].s * t;
+			}
+		}
+
+		void check_limits( p2D& p, p2D& v ){
+
+			int lmin = -20, lmax = 20;
+
+			if( p.first + v.first < lmin ){
+				v.first = v.first * -1;
+			}
+			else if( p.second + v.second < lmin ){
+				v.second = v.second * -1;
+			}
+			else if( p.first + v.first > lmax ){
+				v.first = v.first * -1;
+			}
+			else if( p.second + v.second > lmax ){
+				v.second = v.second * -1;
+			}
+		}
 
 };
 
@@ -240,22 +288,34 @@ int main( int argc, char** argv ){
 
 	time_t timer = time(0); 
 
-	int num_fish;
+	//Params of SchoolFish
+	int num_fish, k, iter;
 	string par = argv[1]; str2int( par, num_fish);
-
-	int k;
 	par = argv[2]; str2int( par, k);
 
+	//Initialization of values
 	SchoolFish<p2D> myschool( num_fish );
 	myschool.init();
 	myschool.print();
 
-	// myschool.print_distances();
-	myschool.calc_neighboors(k);
-	myschool.print_neighboors();
+	float t = 0.5;
+	
+	par = argv[3]; str2int( par, iter);
 
-	myschool.update_c();
-	myschool.print();
+    ofstream result("movement.data");
+
+	for( int i = 0; i < iter; ++i){
+		// cout << i << endl;
+		// myschool.print_distances();
+		myschool.movement(t);
+		myschool.calc_neighboors(k);
+		// myschool.print_neighboors();
+		myschool.update_c();
+		// myschool.print();
+		myschool.print2file( result, 2);
+	}
+
+	result.close();	
 
 	time_t timer2 = time(0); 
     cout <<"\nTiempo total: " << difftime(timer2, timer) << endl;
