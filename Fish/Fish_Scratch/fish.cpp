@@ -181,7 +181,11 @@ class SchoolFish{
 		void print_neighboors(){
 			for( int i = 0; i < schoolfish.size(); ++i){
 				cout << "Fish " << i << endl;
-				printelem( schoolfish[i].neighborhood_r);
+				
+				cout << "Repulsion zone:" << schoolfish[i].neighborhood_r.size() << endl;
+				printelem( schoolfish[i].neighborhood_r );
+
+				cout << "P zone:" << schoolfish[i].neighborhood_p.size() << endl;
 				printelem( schoolfish[i].neighborhood_p);
 			}
 
@@ -248,7 +252,7 @@ int main( int argc, char** argv ){
 
 	// myschool.print_distances();
 	myschool.calc_neighboors(k);
-	// myschool.print_neighboors();
+	myschool.print_neighboors();
 
 	myschool.update_c();
 	myschool.print();
