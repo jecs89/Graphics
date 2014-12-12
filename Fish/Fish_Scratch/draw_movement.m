@@ -25,9 +25,9 @@ for i=1 : experiments
 	end
 		
 	% figure;
-	h = plot( data(:,1), data(:,2), 'b*','LineWidth', 2, 'MarkerSize', 3);
+	h = plot3( data(:,1), data(:,2), 'b*','LineWidth', 2, 'MarkerSize', 3);
 	grid on;
-	axis( [lim1, lim2, lim1, lim2 ]);	
+	axis( [lim1, lim2, lim1, lim2, lim1, lim2 ]);	
 
 	num = int2str( i );
 	name = strcat( num , sufix );

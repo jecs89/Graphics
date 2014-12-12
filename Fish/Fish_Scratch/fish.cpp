@@ -67,21 +67,21 @@ void printelem( T elem ){
 // 	}
 // }
 
-float calc_angle( p2D x, p2D y ){
-	float den = x.first * y.first + x.second * y.second ,
-		  num = sqrtf( powf(x.first,2) + powf(x.second,2) ) + sqrtf( powf(y.first,2) + powf(y.second,2) );
+float calc_angle( p3D x, p3D y ){
+	float den = x.first * y.first + x.second.first * y.second.first + x.second.second * y.second.second,
+		  num = sqrtf( powf(x.first,2) + powf(x.second.first,2) + powf(x.second.second,2) ) + sqrtf( powf(y.first,2) + powf(y.second.first,2) + powf(y.second.second,2) );
 
 	return acos( den / num );
 }
 
 void test_calc_angle(){
-	p2D x ( 3, 0 ), y( 0, 3 );
+	p3D x ( 2, p2D( 3, 0 )), y( 2, p2D( 0, 3 ));
     float ang = calc_angle( x, y );
     cout << setprecision(4) << ang << "\t" << ang*180/PI << endl;
 }
 
-float calc_norm( p2D x, p2D y){
-	return sqrtf( powf(x.first-y.first,2) + powf( x.second-y.second,2) );
+float calc_norm( p3D x, p3D y){
+	return sqrtf( powf(x.first-y.first,2) + powf( x.second.first-y.second.first,2) + powf( x.second.second-y.second.second,2) );
 }
 
 template <typename T>
@@ -103,9 +103,13 @@ class SchoolFish{
 
 			for( int i = 0; i < schoolfish.size(); ++i){
 				schoolfish[i].num = i;
-				schoolfish[i].c = pair<float,float> ( dist(rng),dist(rng) );
+				// schoolfish[i].c = pair<float,float> ( dist(rng),dist(rng) );
 				// schoolfish[i].v = pair<float,float> (2,2);
-				schoolfish[i].v = pair<float,float> (dist(rng),dist(rng) );
+				// schoolfish[i].v = pair<float,float> (dist(rng),dist(rng) );
+
+				schoolfish[i].c = pair< float, pair<float,float> >( dist(rng), pair<float,float> ( dist(rng),dist(rng) ));
+				schoolfish[i].v = pair< float, pair<float,float> >( dist(rng), pair<float,float> ( dist(rng),dist(rng) ));
+
 				schoolfish[i].s = 0.1;
 				schoolfish[i].theta = PI/6;
 				schoolfish[i].r_r = 1.0;
@@ -118,12 +122,12 @@ class SchoolFish{
 		void print(){
 			int dec=4;
 			int pos=dec*2;
-			cout << setw(pos) << "# Fish" << setw(pos*2) << "C" << setw(pos*2) << "V" << setw(pos) << "S" << setw(pos) << "Theta" << setw(pos) << "R-R" << setw(pos)
+			cout << setw(pos) << "# Fish" << setw(pos*3) << "C" << setw(pos*3) << "V" << setw(pos) << "S" << setw(pos) << "Theta" << setw(pos) << "R-R" << setw(pos)
 				 << setw(pos) << "R-P" << setw(pos) << "W_A" << setw(pos) << "W_O" << endl;
 
 			for( int i = 0; i < schoolfish.size(); ++i){
-				cout << setprecision(dec) << setw(pos) << schoolfish[i].num << setw(pos) << schoolfish[i].c.first << setw(pos) << schoolfish[i].c.second << setw(pos) << schoolfish[i].v.first 
-					 << setw(pos) << schoolfish[i].v.second << setw(pos) << schoolfish[i].s << setw(pos) << schoolfish[i].theta 
+				cout << setprecision(dec) << setw(pos) << schoolfish[i].num << setw(pos) << schoolfish[i].c.first << setw(pos) << schoolfish[i].c.second.first << setw(pos) << schoolfish[i].c.second.second << setw(pos) << schoolfish[i].v.first 
+					 << setw(pos) << schoolfish[i].v.second.first << setw(pos) << schoolfish[i].v.second.second << setw(pos) << schoolfish[i].s << setw(pos) << schoolfish[i].theta 
 					 << setw(pos) << schoolfish[i].r_r << setw(pos) << schoolfish[i].r_p << setw(pos) << schoolfish[i].w_a 
 					 << setw(pos) << schoolfish[i].w_o << endl;
 				
@@ -142,10 +146,10 @@ class SchoolFish{
 
 			for( int i = 0; i < schoolfish.size(); ++i){
 				if( type == 1){
-					file << setprecision(dec) << setw(pos) << schoolfish[i].num << setw(pos) << schoolfish[i].c.first << setw(pos) << schoolfish[i].c.second << endl;
+					file << setprecision(dec) << setw(pos) << schoolfish[i].num << setw(pos) << schoolfish[i].c.first << setw(pos) << schoolfish[i].c.second.first << setw(pos) << schoolfish[i].c.second.second << endl;
 				}
 				else if( type == 2){
-					file << setprecision(dec) << schoolfish[i].c.first << "," << schoolfish[i].c.second << endl;	
+					file << setprecision(dec) << schoolfish[i].c.first << "," <<  schoolfish[i].c.second.first << "," << schoolfish[i].c.second.second<< endl;	
 				}
 			}
 		}
@@ -155,7 +159,7 @@ class SchoolFish{
 			vector<float> ans;
 			for( int i = 0; i < schoolfish.size(); ++i){
 				if( i != pos ){
-					float dist = sqrtf( powf(schoolfish[pos].c.first-schoolfish[i].c.first,2) + powf(schoolfish[pos].c.second-schoolfish[i].c.second,2) );
+					float dist = sqrtf( powf(schoolfish[pos].c.first-schoolfish[i].c.first,2) + powf(schoolfish[pos].c.second.first-schoolfish[i].c.second.first,2) + powf(schoolfish[pos].c.second.second-schoolfish[i].c.second.second,2) );
 					ans.push_back( dist );
 				}
 				else{
@@ -215,28 +219,31 @@ class SchoolFish{
 
 		void update_c(){
 			for( int i = 0; i < schoolfish.size(); ++i){
-				pair<float,float> d(0,0);
+				// pair<float,float> d(0,0);
+				p3D d ( 0, p2D( 0, 0 ));
 
 				if( schoolfish[i].neighborhood_r.size() > 0 ){
 					for( int j = 0; j < schoolfish[i].neighborhood_r.size(); ++j){
 						int ii = schoolfish[i].num, jj = schoolfish[i].neighborhood_r[j];
 						float den = calc_norm( schoolfish[ii].c, schoolfish[jj].c );
 						d.first +=  ( schoolfish[jj].c.first - schoolfish[ii].c.first ) / ( den );
-						d.second +=  ( schoolfish[jj].c.second - schoolfish[ii].c.second ) / ( den );	
+						d.second.first +=  ( schoolfish[jj].c.second.first - schoolfish[ii].c.second.first ) / ( den );	
+						d.second.second += ( schoolfish[jj].c.second.second - schoolfish[ii].c.second.second ) / ( den );	
 					}
-					d.first = -1 * d.first; d.second = -1 * d.second;
+					d.first = -1 * d.first; d.second.first = -1 * d.second.first; d.second.second = -1 * d.second.second;
 				}
 				else{
 					for( int j = 0; j < schoolfish[i].neighborhood_r.size(); ++j){
 						int ii = schoolfish[i].num, jj = schoolfish[i].neighborhood_r[j];
 						float den = calc_norm( schoolfish[ii].c, schoolfish[jj].c );
 
-						int norm_v = (schoolfish[i].v.first / sqrtf( powf(schoolfish[i].v.first,2) + powf(schoolfish[i].v.second,2) ) );
+						int norm_v = (schoolfish[i].v.first / sqrtf( powf(schoolfish[i].v.first,2) + powf(schoolfish[i].v.second.first,2) + + powf(schoolfish[i].v.second.second,2) ) );
 
 						d.first +=  ( schoolfish[jj].c.first - schoolfish[ii].c.first ) / ( den ) + norm_v;
-						d.second +=  ( schoolfish[jj].c.second - schoolfish[ii].c.second ) / ( den ) + norm_v;	
+						d.second.first +=  ( schoolfish[jj].c.second.first - schoolfish[ii].c.second.first ) / ( den ) + norm_v;	
+						d.second.second +=  ( schoolfish[jj].c.second.second - schoolfish[ii].c.second.second ) / ( den ) + norm_v;	
 					}
-					d.first = -1 * d.first; d.second = -1 * d.second;
+					d.first = -1 * d.first; d.second.first = -1 * d.second.first; d.second.second = -1 * d.second.second;
 
 				}
 
@@ -244,37 +251,45 @@ class SchoolFish{
 
 				if( calc_angle( schoolfish[i].c, d ) <= schoolfish[i].theta ){
 					 schoolfish[i].c.first = schoolfish[i].c.first + schoolfish[i].s * d.first;
-					 schoolfish[i].c.second = schoolfish[i].c.second + schoolfish[i].s * d.first;
+					 schoolfish[i].c.second.first = schoolfish[i].c.second.first + schoolfish[i].s * d.first;
+					 schoolfish[i].c.second.second = schoolfish[i].c.second.second + schoolfish[i].s * d.first;
 				}
 			}
 		}
 
 		void movement( float t ){
 			for( int i = 0; i < schoolfish.size(); ++i){
-				float cx = schoolfish[i].c.first, cy = schoolfish[i].c.second;
+				// float cx = schoolfish[i].c.first, cy = schoolfish[i].c.second;
 
 				check_limits( schoolfish[i].c, schoolfish[i].v ) ;
 
 				schoolfish[i].c.first  += schoolfish[i].v.first *schoolfish[i].s * t;
-				schoolfish[i].c.second += schoolfish[i].v.second *schoolfish[i].s * t;
+				schoolfish[i].c.second.first += schoolfish[i].v.second.first *schoolfish[i].s * t;
+				schoolfish[i].c.second.second += schoolfish[i].v.second.second *schoolfish[i].s * t;
 			}
 		}
 
-		void check_limits( p2D& p, p2D& v ){
+		void check_limits( p3D& p, p3D& v ){
 
 			int lmin = -20, lmax = 20;
 
 			if( p.first + v.first < lmin ){
 				v.first = v.first * -1;
 			}
-			else if( p.second + v.second < lmin ){
-				v.second = v.second * -1;
-			}
 			else if( p.first + v.first > lmax ){
 				v.first = v.first * -1;
 			}
-			else if( p.second + v.second > lmax ){
-				v.second = v.second * -1;
+			else if( p.second.first + v.second.first < lmin ){
+				v.second.first = v.second.first * -1;
+			}
+			else if( p.second.first + v.second.first > lmax ){
+				v.second.first = v.second.first * -1;
+			}
+			else if( p.second.second + v.second.second < lmin ){
+				v.second.second = v.second.second * -1;
+			}
+			else if( p.second.second + v.second.second > lmax ){
+				v.second.second = v.second.second * -1;
 			}
 		}
 
@@ -294,7 +309,8 @@ int main( int argc, char** argv ){
 	par = argv[2]; str2int( par, k);
 
 	//Initialization of values
-	SchoolFish<p2D> myschool( num_fish );
+	// SchoolFish<p2D> myschool( num_fish );
+	SchoolFish<p3D> myschool( num_fish );
 	myschool.init();
 	myschool.print();
 
