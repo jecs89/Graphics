@@ -6,8 +6,6 @@
 #include <sstream>
 #include <fstream>
 
-//./fish 20000 10 200 15 5 
-
 
 #define PI 3.1416
 
@@ -32,6 +30,24 @@ struct fish
 	vector<int> neighborhood_r;	//neighbors in repulsion zone
 	vector<int> neighborhood_p; //neighbors in annulus r_r & r_p
 };
+
+__global__ void cuda_norm( fish<p3D>* schoolfish, int pos, float* c){
+
+	int index = threadIdx.x + blockIdx.x*blockDim.x;
+
+	float dist = sqrtf( powf(schoolfish[pos].c.first-schoolfish[index].c.first,2) + 
+						powf(schoolfish[pos].c.second.first-schoolfish[index].c.second.first,2) + 
+						powf(schoolfish[pos].c.second.second-schoolfish[index].c.second.second,2) );
+
+	c[index] = dist ;
+}
+
+template <typename T>
+void ptr2vector( T* ptr, vector<T>& vec, int size){
+	for( int i = 0; i < size; ++i){
+		vec.push_back( ptr[i] );
+	}
+}
 
 template <typename T>
 void printelem( T elem ){
@@ -86,6 +102,7 @@ float calc_norm( p3D x, p3D y){
 	return sqrtf( powf(x.first-y.first,2) + powf( x.second.first-y.second.first,2) + powf( x.second.second-y.second.second,2) );
 }
 
+
 template <typename T>
 class SchoolFish{
 	vector< fish< T > > schoolfish;
@@ -94,14 +111,13 @@ class SchoolFish{
 	public:
 		SchoolFish(int size){
 		schoolfish.resize(size);
-		float w_a, w_o;
 	}
 
-		void init( float wa, float wo ){
+		void init(){
 			default_random_engine rng(random_device{}()); 		
 			// uniform_real_distribution<float> dist( -10, 10); 
 
-			lim1 = -50, lim2 = 50;
+			lim1 = -10, lim2 = 10;
 			uniform_real_distribution<float> dist( lim1, lim2 );
 
 			for( int i = 0; i < schoolfish.size(); ++i){
@@ -117,8 +133,8 @@ class SchoolFish{
 				schoolfish[i].theta = PI/6;
 				schoolfish[i].r_r = 1.0;
 				schoolfish[i].r_p = 1.5;
-				schoolfish[i].w_a = wa;
-				schoolfish[i].w_o = wo;
+				schoolfish[i].w_a = 1;
+				schoolfish[i].w_o = 5;
 			}
 		}
 
@@ -274,7 +290,7 @@ class SchoolFish{
 
 		void check_limits( p3D& p, p3D& v ){
 
-			int lmin = -100, lmax = 100;
+			int lmin = -20, lmax = 20;
 
 			if( p.first + v.first < lmin ){
 				v.first = v.first * -1;
@@ -298,8 +314,7 @@ class SchoolFish{
 
 };
 
-template <typename T>
-inline void str2num(string str, T& num){
+inline void str2int(string str, int& num){
 	if ( ! (istringstream(str) >> num) ) num = 0;
 }
 
@@ -309,21 +324,18 @@ int main( int argc, char** argv ){
 
 	//Params of SchoolFish
 	int num_fish, k, iter;
-	string par = argv[1]; str2num( par, num_fish);
-	par = argv[2]; str2num( par, k);
-
-	float t = 1;
-	par = argv[3]; str2num( par, iter);
-
-	float wa, wo;
-	par = argv[4]; str2num( par, wa);
-	par = argv[5]; str2num( par, wo);
+	string par = argv[1]; str2int( par, num_fish);
+	par = argv[2]; str2int( par, k);
 
 	//Initialization of values
 	// SchoolFish<p2D> myschool( num_fish );
 	SchoolFish<p3D> myschool( num_fish );
-	myschool.init(wa,wo);
+	myschool.init();
 	myschool.print();
+
+	float t = 0.5;
+	
+	par = argv[3]; str2int( par, iter);
 
     ofstream result("movement.data");
 
