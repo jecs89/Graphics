@@ -43,7 +43,7 @@ __global__ void cuda_norm( fish<p3D>* schoolfish, int pos, float* c){
 }
 
 template <typename T>
-void ptr2vector( T* ptr, vector<T>& vec, int size){
+void ptr2vector( T*& ptr, vector<T>& vec, int size){
 	for( int i = 0; i < size; ++i){
 		vec.push_back( ptr[i] );
 	}
@@ -174,17 +174,43 @@ class SchoolFish{
 		}
 
 		vector<float> v_norm(int pos){
+
+			int N = 10, M = 2;
 			// cout << "Fish" << pos << endl;
+			
 			vector<float> ans;
-			for( int i = 0; i < schoolfish.size(); ++i){
-				if( i != pos ){
-					float dist = sqrtf( powf(schoolfish[pos].c.first-schoolfish[i].c.first,2) + powf(schoolfish[pos].c.second.first-schoolfish[i].c.second.first,2) + powf(schoolfish[pos].c.second.second-schoolfish[i].c.second.second,2) );
-					ans.push_back( dist );
-				}
-				else{
-					ans.push_back( 50 );		
-				}
-			}
+
+			float* ansptr;
+
+			fish<T>* schoolptr;
+			// ptr2vector( schoolptr, schoolfish, schoolptr.size() );
+
+			fish<T>* d_schoolptr;
+
+			int size = schoolfish.size() * sizeof(T);
+			
+			// Allocate space for device copies of a,b,c
+			cudaMalloc((void **)&d_schoolptr, size);
+			
+			// Alloc space for host copies of a,b,c and setup input
+			schoolptr = (T *)malloc(size);
+			
+			// Copy inputs to device
+			cudaMemcpy(d_schoolptr, schoolptr, size, cudaMemcpyHostToDevice);  // Args: Dir. destino, Dir. origen, tamano de dato, sentido del envio
+
+			// Launch add() kernel on GPU
+			cuda_norm<<<(N+M-1)/M,M>>> ( schoolptr, pos, ansptr );
+
+			// Copy result back to host
+			cudaMemcpy(d_schoolptr, schoolptr, size, cudaMemcpyDeviceToHost);
+
+			ptr2vector( ansptr, ans, schoolfish.size() );
+
+			// Cleanup
+			free(a);
+			free(b);
+			cudaFree(d_a);
+			cudaFree(d_b);
 
 			return ans;
 		}
