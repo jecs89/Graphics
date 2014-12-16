@@ -46,17 +46,6 @@ __global__ void cuda_norm( fish<p3D>* schoolfish, int pos, float* c){
 	printf( "%d%c", c[index], '\n');
 }
 
-__global__ void add(int *a, int *b, int *c, int n){
-	int index = threadIdx.x + blockIdx.x*blockDim.x;
-
-	c[index] = a[index] + b[index];
-	printf("%d %d %d \n", a[index], b[index], c[index]);
-}
-
-__global__ void print(int *a){
- 	printf("%d \n", blockIdx.x);
-}
-
 template <typename Type>
 void ptr2vector( Type*& ptr, vector<Type>& vec, int size){
 	for( int i = 0; i < size; ++i){
@@ -194,8 +183,8 @@ class SchoolFish{
 
 		vector<float> v_norm(int pos){
 			
-			int N = 2000000, M = 2048;
-			cout << "Fish" << pos << endl;
+			int N = 10000, M = 1000;
+			// cout << "Fish" << pos << endl;
 			
 			vector<float> ans;
 			// ans[0] = 2.0;
@@ -207,71 +196,50 @@ class SchoolFish{
 			fish<T>* schoolptr;
 			vector2ptr( schoolfish, schoolptr, schoolfish.size() );
 
+			// cout << "Original \n";
+			// this->print();
+
+			// cout << "Copy of schoolfish\n";
+
+			// int pos_ = 8;
+			// int dec = 4;
+			// for( int i = 0; i < schoolfish.size(); ++i){
+			// 	cout << setprecision(dec) << setw(pos_) << schoolptr[i].num << setw(pos_) << schoolptr[i].c.first << setw(pos_) << schoolptr[i].c.second.first << setw(pos_) << schoolptr[i].c.second.second << setw(pos_) << schoolptr[i].v.first 
+			// 		 << setw(pos_) << schoolptr[i].v.second.first << setw(pos_) << schoolptr[i].v.second.second << setw(pos_) << schoolptr[i].s << setw(pos_) << schoolptr[i].theta 
+			// 		 << setw(pos_) << schoolptr[i].r_r << setw(pos_) << schoolptr[i].r_p << setw(pos_) << schoolptr[i].w_a 
+			// 		 << setw(pos_) << schoolptr[i].w_o << endl;
+				
+			// 	string blank = "      ";
+			// 	// printf( "%s%.4f%s%.4f%s%.4f%s%.4f%s%.4f%s%.4f%s%.4f%s%.4f%s%.4f%s%.4f%s", blank.c_str(), schoolfish[i].c.first, blank.c_str(), schoolfish[i].c.second, 
+			// 	// 		blank.c_str(), schoolfish[i].v.first, blank.c_str(), schoolfish[i].v.second, blank.c_str(), schoolfish[i].s, blank.c_str(), schoolfish[i].theta,
+			// 	// 		blank.c_str(), schoolfish[i].r_r, blank.c_str(), schoolfish[i].r_p, blank.c_str(), schoolfish[i].w_a, blank.c_str(), schoolfish[i].w_o, "\n" );
+			// }
+			// cout << endl;	
+
+
+
 			//Copy for devices
 			fish<T>* d_schoolptr;
 			float* d_ansptr;
 
-			int size = schoolfish.size() * sizeof(T);
-			
 			// // // Allocate space for device copies of schoolptr
-			cudaMalloc((void **)&d_schoolptr, size);
+			cudaMalloc((void **)&d_schoolptr, schoolfish.size() * sizeof(T) );
 			cudaMalloc((void **)&d_ansptr, schoolfish.size()*sizeof(float) );
 			
 			// // Copy inputs to device
-			cudaMemcpy(d_schoolptr, schoolptr, size, cudaMemcpyHostToDevice);  // Args: Dir. destino, Dir. origen, tamano de dato, sentido del envio
+			cudaMemcpy(d_schoolptr, schoolptr, schoolfish.size() * sizeof(T), cudaMemcpyHostToDevice);  // Args: Dir. destino, Dir. origen, tamano de dato, sentido del envio
 
 			// // Launch add() kernel on GPU
-			cout << "Start Cuda Call\n";
+			// cout << "Start Cuda Call\n";
 			cuda_norm<<<(N+M-1)/M,M>>> ( d_schoolptr, pos, d_ansptr );
-			cout << "End Cuda Call\n";
+			// cout << "End Cuda Call\n";
 
 			// // Copy result back to host
-			cudaMemcpy(ansptr, d_ansptr, size, cudaMemcpyDeviceToHost);
+			cudaMemcpy(ansptr, d_ansptr, schoolfish.size()*sizeof(float), cudaMemcpyDeviceToHost);
 
 			ptr2vector( ansptr, ans, schoolfish.size() );
 
 			// printelem( ans );
-
-			int *a,*b,*c;					// host copies of a,b,c
-			int *d_a, *d_b, *d_c;		// device copies of a,b,c
-			size = 1000 * sizeof(int);
-
-			// Allocate space for device copies of a,b,c
-			cudaMalloc((void **)&d_a, size);
-			cudaMalloc((void **)&d_b, size);
-			cudaMalloc((void **)&d_c, size);
-
-			// Alloc space for host copies of a,b,c and setup input
-
-			a = (int *)malloc(size);
-			b = (int *)malloc(size);
-			c = (int *)malloc(size);
-
-			for(int i=0; i<1000; ++i)
-			{
-				a[i] = i*i;
-				b[i] = i*2;
-			}
-
-			// Copy inputs to device
-			cudaMemcpy(d_a, a, size, cudaMemcpyHostToDevice);  // Args: Dir. destino, Dir. origen, tamano de dato, sentido del envio
-			cudaMemcpy(d_b, b, size, cudaMemcpyHostToDevice);
-
-			// Launch add() kernel on GPU
-			add<<<100,10>>> (d_a, d_b, d_c, 1000);
-			// print<<<1000,1>>> (d_a);
-
-			// Copy result back to host
-			// cudaMemcpy(c, d_c, size, cudaMemcpyDeviceToHost);
-
-			// Cleanup
-			free(a);
-			free(b);
-			free(c);
-			cudaFree(d_a);
-			cudaFree(d_b);
-			cudaFree(d_c);
-
 
 			// Cleanup
 			free(schoolptr);
@@ -452,7 +420,7 @@ int main( int argc, char** argv ){
 	// SchoolFish<p2D> myschool( num_fish );
 	SchoolFish<p3D> myschool( num_fish );
 	myschool.init(wa,wo);
-	myschool.print();
+	// myschool.print();
 
     ofstream result("movement_cuda.data");
 

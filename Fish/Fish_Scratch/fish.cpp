@@ -101,7 +101,7 @@ class SchoolFish{
 			default_random_engine rng(random_device{}()); 		
 			// uniform_real_distribution<float> dist( -10, 10); 
 
-			lim1 = -50, lim2 = 50;
+			lim1 = 50, lim2 = 100;
 			uniform_real_distribution<float> dist( lim1, lim2 );
 
 			for( int i = 0; i < schoolfish.size(); ++i){
@@ -114,7 +114,7 @@ class SchoolFish{
 				schoolfish[i].v = pair< float, pair<float,float> >( dist(rng), pair<float,float> ( dist(rng),dist(rng) ));
 
 				schoolfish[i].s = 0.1;
-				schoolfish[i].theta = PI/6;
+				schoolfish[i].theta = PI/3;
 				schoolfish[i].r_r = 1.0;
 				schoolfish[i].r_p = 1.5;
 				schoolfish[i].w_a = wa;
@@ -240,11 +240,11 @@ class SchoolFish{
 						int ii = schoolfish[i].num, jj = schoolfish[i].neighborhood_r[j];
 						float den = calc_norm( schoolfish[ii].c, schoolfish[jj].c );
 
-						int norm_v = (schoolfish[i].v.first / sqrtf( powf(schoolfish[i].v.first,2) + powf(schoolfish[i].v.second.first,2) + + powf(schoolfish[i].v.second.second,2) ) );
+						int norm_v = (schoolfish[i].v.first / sqrtf( powf(schoolfish[i].v.first,2) + powf(schoolfish[i].v.second.first,2) + powf(schoolfish[i].v.second.second,2) ) );
 
-						d.first +=  ( schoolfish[jj].c.first - schoolfish[ii].c.first ) / ( den ) + norm_v;
-						d.second.first +=  ( schoolfish[jj].c.second.first - schoolfish[ii].c.second.first ) / ( den ) + norm_v;	
-						d.second.second +=  ( schoolfish[jj].c.second.second - schoolfish[ii].c.second.second ) / ( den ) + norm_v;	
+						d.first +=  schoolfish[0].w_a * ( schoolfish[jj].c.first - schoolfish[ii].c.first ) / ( den ) + schoolfish[0].w_o * norm_v;
+						d.second.first +=  schoolfish[0].w_a * ( schoolfish[jj].c.second.first - schoolfish[ii].c.second.first ) / ( den ) + schoolfish[0].w_o * norm_v;	
+						d.second.second +=  schoolfish[0].w_a * ( schoolfish[jj].c.second.second - schoolfish[ii].c.second.second ) / ( den ) + schoolfish[0].w_o * norm_v;	
 					}
 					d.first = -1 * d.first; d.second.first = -1 * d.second.first; d.second.second = -1 * d.second.second;
 
