@@ -16,6 +16,8 @@ using namespace std;
 typedef pair<float,float> p2D;
 typedef pair< float, pair<float,float> > p3D;
 
+
+
 template <typename T>
 struct fish
 {
@@ -36,14 +38,18 @@ struct fish
 __global__ void cuda_norm( fish<p3D>* schoolfish, int pos, float* c){
 
 	int index = threadIdx.x + blockIdx.x*blockDim.x;
-	printf( "%s%i%c", "Hola", index, '\n' );
+	// printf( "%i\t", index );
 
-	float dist = sqrtf( powf(schoolfish[pos].c.first-schoolfish[index].c.first,2) + 
-						powf(schoolfish[pos].c.second.first-schoolfish[index].c.second.first,2) + 
-						powf(schoolfish[pos].c.second.second-schoolfish[index].c.second.second,2) );
+	float t1 = powf(schoolfish[pos].c.first-schoolfish[index].c.first,2);
+	float t2 = powf(schoolfish[pos].c.second.first-schoolfish[index].c.second.first,2);
+	float t3 = powf(schoolfish[pos].c.second.second-schoolfish[index].c.second.second,2);
+
+	float dist = sqrtf( t1 + t2 + t3 );
+
+	// printf( "%f\t%f\t%f\t%f\n",t1,t2,t3,dist);
 
 	c[index] = dist ;
-	printf( "%d%c", c[index], '\n');
+	// printf( "%d\n", c[index] );
 }
 
 template <typename Type>
@@ -55,9 +61,6 @@ void ptr2vector( Type*& ptr, vector<Type>& vec, int size){
 
 template <typename Type>
 void vector2ptr( vector<Type>& vec, Type*& ptr, int size){
-
-	ptr = ( Type* )malloc( size * sizeof(Type) );
-
 	for( int i = 0; i < size; ++i){
 		ptr[i] = vec[i];
 	}
@@ -135,12 +138,12 @@ class SchoolFish{
 				// schoolfish[i].v = pair<float,float> (dist(rng),dist(rng) );
 
 				schoolfish[i].c = pair< float, pair<float,float> >( dist(rng), pair<float,float> ( dist(rng),dist(rng) ));
-				schoolfish[i].v = pair< float, pair<float,float> >( dist(rng), pair<float,float> ( dist(rng),dist(rng) ));
+				schoolfish[i].v = pair< float, pair<float,float> >( dist(rng)/10, pair<float,float> ( dist(rng)/10,dist(rng)/10 )) ;
 
 				schoolfish[i].s = 0.1;
 				schoolfish[i].theta = PI/6;
-				schoolfish[i].r_r = 1.0;
-				schoolfish[i].r_p = 1.5;
+				schoolfish[i].r_r = 3;
+				schoolfish[i].r_p = 5;
 				schoolfish[i].w_a = wa;
 				schoolfish[i].w_o = wo;
 			}
@@ -183,17 +186,25 @@ class SchoolFish{
 
 		vector<float> v_norm(int pos){
 			
-			int N = 10000, M = 1000;
-			// cout << "Fish" << pos << endl;
+
+			int N = 65536, M = 1024;
+			cout << "Fish" << pos << endl;
 			
 			vector<float> ans;
 			// ans[0] = 2.0;
 
+			int size_ans = schoolfish.size() * sizeof(float);
+			int size_school = schoolfish.size() * sizeof(fish<T>);
+
+			printf("%s\t%i\t%s\t%i\t%s\t%i\n", "School", (int)schoolfish.size(), "Size ans", size_ans, "Size school", size_school);
+
 			float* ansptr;
-			ansptr = (float *)malloc( schoolfish.size() * sizeof(float) );
+			ansptr = (float *)malloc( size_ans );
 			
 			//Copy info from schoolfish to schoolptr
 			fish<T>* schoolptr;
+			schoolptr = ( fish<T>* )malloc( size_school );
+
 			vector2ptr( schoolfish, schoolptr, schoolfish.size() );
 
 			// cout << "Original \n";
@@ -216,18 +227,16 @@ class SchoolFish{
 			// }
 			// cout << endl;	
 
-
-
 			//Copy for devices
 			fish<T>* d_schoolptr;
 			float* d_ansptr;
 
 			// // // Allocate space for device copies of schoolptr
-			cudaMalloc((void **)&d_schoolptr, schoolfish.size() * sizeof(T) );
-			cudaMalloc((void **)&d_ansptr, schoolfish.size()*sizeof(float) );
+			cudaMalloc((void **)&d_schoolptr, size_school );
+			cudaMalloc((void **)&d_ansptr, size_ans );
 			
 			// // Copy inputs to device
-			cudaMemcpy(d_schoolptr, schoolptr, schoolfish.size() * sizeof(T), cudaMemcpyHostToDevice);  // Args: Dir. destino, Dir. origen, tamano de dato, sentido del envio
+			cudaMemcpy(d_schoolptr, schoolptr, size_school, cudaMemcpyHostToDevice);  // Args: Dir. destino, Dir. origen, tamano de dato, sentido del envio
 
 			// // Launch add() kernel on GPU
 			// cout << "Start Cuda Call\n";
@@ -235,11 +244,11 @@ class SchoolFish{
 			// cout << "End Cuda Call\n";
 
 			// // Copy result back to host
-			cudaMemcpy(ansptr, d_ansptr, schoolfish.size()*sizeof(float), cudaMemcpyDeviceToHost);
+			cudaMemcpy(ansptr, d_ansptr, size_ans, cudaMemcpyDeviceToHost);
 
 			ptr2vector( ansptr, ans, schoolfish.size() );
 
-			// printelem( ans );
+			printelem( ans );
 
 			// Cleanup
 			free(schoolptr);
@@ -282,7 +291,7 @@ class SchoolFish{
 				}
 				// cout << endl;
 			}
-			cout << "Good Calc neighbors" << endl;
+			// cout << "Good Calc neighbors" << endl;
 		}
 
 		void print_neighboors(){
@@ -348,7 +357,7 @@ class SchoolFish{
 				schoolfish[i].c.second.first += schoolfish[i].v.second.first *schoolfish[i].s * t;
 				schoolfish[i].c.second.second += schoolfish[i].v.second.second *schoolfish[i].s * t;
 			}
-			cout << "Good Movement" << endl;
+			// cout << "Good Movement" << endl;
 		}
 
 		void check_limits( p3D& p, p3D& v ){
@@ -420,12 +429,12 @@ int main( int argc, char** argv ){
 	// SchoolFish<p2D> myschool( num_fish );
 	SchoolFish<p3D> myschool( num_fish );
 	myschool.init(wa,wo);
-	// myschool.print();
+	myschool.print();
 
     ofstream result("movement_cuda.data");
 
 	for( int i = 0; i < iter; ++i){
-		cout << "Iter: " << i << endl;
+		// cout << "Iter: " << i << endl;
 		// myschool.print_distances();
 		myschool.movement(t);
 		myschool.calc_neighboors(k);
