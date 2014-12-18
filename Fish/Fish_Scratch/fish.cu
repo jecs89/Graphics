@@ -5,6 +5,7 @@
 #include <string>
 #include <sstream>
 #include <fstream>
+#include <thread>
 
 //./fish 20000 10 200 15 5 
 
@@ -30,8 +31,8 @@ struct fish{
 	double theta;	//vision's angle
 	double r_r;		//repulsion radius
 	double r_p;		//reach radius
-	double w_a;		//attraction weight
-	double w_o;		//orientation weight
+	// double w_a;		//attraction weight
+	// double w_o;		//orientation weight
 
 	vector<int> neighborhood_r;	//neighbors in repulsion zone
 	vector<int> neighborhood_p; //neighbors in annulus r_r & r_p
@@ -142,7 +143,11 @@ double calc_norm( p3D x, p3D y){
 template <typename T>
 class SchoolFish{
 	vector< fish< T > > schoolfish;
-	double lim1, lim2;
+	int lim1, lim2;
+	double wa, wo;
+
+	int start, end;
+	// int start, int end
 
 	vector<p3D> v_p3D;
 
@@ -153,25 +158,20 @@ class SchoolFish{
 		// double w_a, w_o;
 	}
 
-		void init( double wa, double wo ){
-
+		void parallel_init(int start, int end){
 			int scale = 10;
 
 			default_random_engine rng(random_device{}()); 		
-			// uniform_real_distribution<double> dist( -10, 10); 
-
-			lim1 = 50, lim2 = 100;
 			uniform_real_distribution<double> dist( lim1, lim2 );
 
-			for( int i = 0; i < schoolfish.size(); ++i){
-				schoolfish[i].num = i;
-				// schoolfish[i].c = pair<double,double> ( dist(rng),dist(rng) );
-				// schoolfish[i].v = pair<double,double> (2,2);
-				// schoolfish[i].v = pair<double,double> (dist(rng),dist(rng) );
+			cout << "Thread: " << start << "\t" << end << endl;
 
-				schoolfish[i].c.x = 1+i/2.0;
-				schoolfish[i].c.y = 1+i/2.0;
-				schoolfish[i].c.z = 1+i/2.0 ;
+			for( int i = start; i < end; ++i){
+				schoolfish[i].num = i;
+
+				schoolfish[i].c.x = dist(rng);
+				schoolfish[i].c.y = dist(rng);
+				schoolfish[i].c.z = dist(rng);
 
 				schoolfish[i].v.x = dist(rng)/scale;
 				schoolfish[i].v.y = dist(rng)/scale;
@@ -179,13 +179,48 @@ class SchoolFish{
 
 				schoolfish[i].s = 0.1;
 				schoolfish[i].theta = PI/6;
-				schoolfish[i].r_r = 0.5;
-				schoolfish[i].r_p = 1;
-				schoolfish[i].w_a = wa;
-				schoolfish[i].w_o = wo;
+				schoolfish[i].r_r = 3;
+				schoolfish[i].r_p = 5;
+				// schoolfish[i].w_a = wa;
+				// schoolfish[i].w_o = wo;
 
 				v_p3D[i] = schoolfish[i].c;
 			}
+		}
+
+		void init( double _wa, double _wo ){
+			wa = _wa; wo = _wo;
+
+			lim1 = 50, lim2 = 100;
+
+			//Parallel Process
+		    int nThreads = thread::hardware_concurrency();  // # threads
+		    vector<thread> ths(nThreads);   // threads vector
+
+		    //dimensions of blocks
+		    int incx = double(schoolfish.size()) / nThreads;
+
+		    // int start, end;
+		    //Launching threads
+		    for ( int i = 0; i < nThreads/2; ++i){
+		    	start = i * incx, end = (i+1) * incx ;
+		    	cout << start << "\t" << end << endl;
+		    	//bind(&SchoolFish<T>::parallel_init, this, start, end) );
+		        ths[i] = thread( &SchoolFish<T>::parallel_init, this, start, end );
+		    }
+
+		    lim1 = -100, lim2 = -50;
+
+		    for ( int i = nThreads/2; i < nThreads; ++i){
+		    	start = i * incx, end = (i+1) * incx ;
+		    	cout << start << "\t" << end << endl;
+		    	//bind(&SchoolFish<T>::parallel_init, this, start, end) );
+		        ths[i] = thread( &SchoolFish<T>::parallel_init, this, start, end );
+		    }
+		    
+		    //Joining threads
+		    for ( int i = 0; i < nThreads; i++ )
+		        ths[i].join();
 		}
 
 		void print(){
@@ -197,8 +232,8 @@ class SchoolFish{
 			for( int i = 0; i < schoolfish.size(); ++i){
 				cout << setprecision(dec) << setw(pos) << schoolfish[i].num << setw(pos) << schoolfish[i].c.x << setw(pos) << schoolfish[i].c.y << setw(pos) << schoolfish[i].c.z << setw(pos) << schoolfish[i].v.x
 					 << setw(pos) << schoolfish[i].v.y << setw(pos) << schoolfish[i].v.z << setw(pos) << schoolfish[i].s << setw(pos) << schoolfish[i].theta 
-					 << setw(pos) << schoolfish[i].r_r << setw(pos) << schoolfish[i].r_p << setw(pos) << schoolfish[i].w_a 
-					 << setw(pos) << schoolfish[i].w_o << endl;
+					 << setw(pos) << schoolfish[i].r_r << setw(pos) << schoolfish[i].r_p << setw(pos) << wa 
+					 << setw(pos) << wo << endl;
 			}	
 		}
 
@@ -226,12 +261,8 @@ class SchoolFish{
 			
 			vector<double> ans;
 
-			// ans[0] = 2.0;
-
 			int size_ans = schoolfish.size() * sizeof(double);
 			int size_school = v_p3D.size() * sizeof( p3D );
-
-			// printf("%s\t%i\t%s\t%i\t%s\t%i\n", "School", (int)schoolfish.size(), "Size ans", size_ans, "Size school", size_school);
 
 			double* ansptr;
 			ansptr = (double *)malloc( size_ans );
@@ -241,28 +272,6 @@ class SchoolFish{
 			schoolptr = ( p3D* )malloc( size_school );
 
 			vector2ptr( v_p3D, schoolptr, schoolfish.size() );
-
-			// cout << "Step\n";
-
-			// cout << "Original \n";
-			// this->print();
-
-			// cout << "Copy of schoolfish\n";
-
-			// int pos_ = 8;
-			// int dec = 4;
-			// for( int i = 0; i < schoolfish.size(); ++i){
-			// 	cout << setprecision(dec) << setw(pos_) << schoolptr[i].num << setw(pos_) << schoolptr[i].c.x << setw(pos_) << schoolptr[i].c.y << setw(pos_) << schoolptr[i].c.z << setw(pos_) << schoolptr[i].v.x
-			// 		 << setw(pos_) << schoolptr[i].v.y << setw(pos_) << schoolptr[i].v.z << setw(pos_) << schoolptr[i].s << setw(pos_) << schoolptr[i].theta 
-			// 		 << setw(pos_) << schoolptr[i].r_r << setw(pos_) << schoolptr[i].r_p << setw(pos_) << schoolptr[i].w_a 
-			// 		 << setw(pos_) << schoolptr[i].w_o << endl;
-				
-			// 	string blank = "      ";
-			// 	// printf( "%s%.4f%s%.4f%s%.4f%s%.4f%s%.4f%s%.4f%s%.4f%s%.4f%s%.4f%s%.4f%s", blank.c_str(), schoolfish[i].c.x, blank.c_str(), schoolfish[i].c.second, 
-			// 	// 		blank.c_str(), schoolfish[i].v.first, blank.c_str(), schoolfish[i].v.second, blank.c_str(), schoolfish[i].s, blank.c_str(), schoolfish[i].theta,
-			// 	// 		blank.c_str(), schoolfish[i].r_r, blank.c_str(), schoolfish[i].r_p, blank.c_str(), schoolfish[i].w_a, blank.c_str(), schoolfish[i].w_o, "\n" );
-			// }
-			// cout << endl;	
 
 			//Copy for devices
 			p3D* d_schoolptr;
@@ -369,9 +378,9 @@ class SchoolFish{
 
 						int norm_v = (schoolfish[i].v.x/ sqrtf( powf(schoolfish[i].v.x,2) + powf(schoolfish[i].v.y,2) + powf(schoolfish[i].v.z,2) ) );
 
-						d.x +=  schoolfish[0].w_a * ( schoolfish[jj].c.x - schoolfish[ii].c.x ) / ( den ) + schoolfish[0].w_o * norm_v;
-						d.y +=  schoolfish[0].w_a * ( schoolfish[jj].c.y - schoolfish[ii].c.y ) / ( den ) + schoolfish[0].w_o * norm_v;	
-						d.z +=  schoolfish[0].w_a * ( schoolfish[jj].c.z - schoolfish[ii].c.z ) / ( den ) + schoolfish[0].w_o * norm_v;	
+						d.x +=  wa * ( schoolfish[jj].c.x - schoolfish[ii].c.x ) / ( den ) + wo * norm_v;
+						d.y +=  wa * ( schoolfish[jj].c.y - schoolfish[ii].c.y ) / ( den ) + wo * norm_v;	
+						d.z +=  wa * ( schoolfish[jj].c.z - schoolfish[ii].c.z ) / ( den ) + wo * norm_v;	
 					}
 					d.x = -1 * d.x; d.y = -1 * d.y; d.z = -1 * d.z;
 
@@ -457,7 +466,7 @@ int main( int argc, char** argv ){
 	// SchoolFish<p2D> myschool( num_fish );
 	SchoolFish<p3D> myschool( num_fish );
 	myschool.init(wa,wo);
-	// myschool.print();
+	myschool.print();
 
     ofstream result("movement_cuda.data");
 
@@ -479,3 +488,6 @@ int main( int argc, char** argv ){
 
 	return 0;
 }
+
+
+
