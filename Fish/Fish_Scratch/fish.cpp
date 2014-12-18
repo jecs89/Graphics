@@ -170,6 +170,8 @@ class SchoolFish{
 				}
 			}
 
+			// cout << "ANS Size: " <<  ans.size() << endl;
+
 			return ans;
 		}
 
@@ -182,6 +184,7 @@ class SchoolFish{
 		void calc_neighboors( int k ){
 			for( int i = 0; i < schoolfish.size(); ++i){
 				vector<float> v_dist = ( v_norm(i) );
+				v_dist[i] = 10000;
 
 				for( int j = 0; j < v_dist.size(); ++j){
 					int act_size = schoolfish[i].neighborhood_r.size()+ schoolfish[i].neighborhood_p.size();
@@ -323,7 +326,7 @@ int main( int argc, char** argv ){
 	// SchoolFish<p2D> myschool( num_fish );
 	SchoolFish<p3D> myschool( num_fish );
 	myschool.init(wa,wo);
-	myschool.print();
+	// myschool.print();
 
     ofstream result("movement.data");
 
