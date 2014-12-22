@@ -44,57 +44,73 @@ int main( int argc, char** argv ){
 	int numelem;
 	string param = argv[1]; str2num( param, numelem);
 
+	int numexp;
+	param = argv[2]; str2num( param, numexp);
+
 	ofstream result("experiment.data");
 
+	vector<time_t> timer(6);
+	timer[0] = 0;
+	timer[5] = 0; 
+
 	for(int i = 0; i < numelem; ++i){
-
 		int size = pow(2, i);
-
 		cout << "# elems: " << size << endl;
-
-		//Initialization
-		thrust::host_vector<double> h_V;
-		thrust::device_vector<double> g_V;
-
-		h_V.resize( size );
-
-		int seed = time(0);
-		rnd_fill( h_V, 0.1, 1.0, seed);
-
-		g_V = h_V;
-
-		vector<double> c_V;
-		c_V.resize( size );
-
-		for( int i = 0; i < h_V.size(); ++i){
-			c_V[i] = h_V[i];
-		}	
-
-		cout << "GPU SORTING\n";
-	      
-		    time_t timer = time(0); 
 		
-		 	thrust::sort( g_V.begin(), g_V.end(), order() );
+		for( int j = 0; j < numexp; ++j){
 
-			time_t timer2 = time(0); 
+			
 
-		    cout <<"Tiempo total: " << difftime(timer2, timer) << endl;
+			//Initialization
+			thrust::host_vector<double> h_V;
+			thrust::device_vector<double> g_V;
 
-		    result << size << "," << difftime(timer2, timer) << endl;
+			h_V.resize( size );
 
-	    cout << "CPU SORTING\n";
+			int seed = time(0);
+			rnd_fill( h_V, 0.1, 1.0, seed);
 
-	    	timer = time(0); 
+			g_V = h_V;
 
-			sort( c_V.begin(), c_V.end());
+			vector<double> c_V;
+			c_V.resize( size );
 
-			timer2 = time(0); 
+			for( int i = 0; i < h_V.size(); ++i){
+				c_V[i] = h_V[i];
+			}	
 
-		    cout <<"Tiempo total: " << difftime(timer2, timer) << endl;
+			
 
-		    result << size << "," << difftime(timer2, timer) << endl;
+				timer[1] = time(0);
+		      
+			 	thrust::sort( g_V.begin(), g_V.end(), order() );
 
+			 	timer[2] = time(0);
+
+			    // result << size << "," << difftime(timer[2], timer[1]) << endl;
+
+			    timer[0] += difftime(timer[2], timer[1]);
+
+	    	
+
+	    		timer[3] = time(0);
+
+				sort( c_V.begin(), c_V.end());
+
+				timer[4] = time(0);
+
+			    // result << size << "," << difftime(timer[4], timer[3]) << endl;
+
+				timer[5] += difftime(timer[4], timer[3]);			    
+		}
+		
+		
 	}
+
+	cout << "GPU SORTING\n";
+		cout <<"Tiempo total: " << timer[0] << endl;
+	cout << "CPU SORTING\n";
+		cout <<"Tiempo total: " << timer[5] << endl;
 
 	result.close();
     
