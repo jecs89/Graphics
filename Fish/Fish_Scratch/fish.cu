@@ -1,3 +1,4 @@
+//CPU includes
 #include <iostream>
 #include <algorithm>
 #include <random>
@@ -7,6 +8,11 @@
 #include <fstream>
 #include <thread>
 
+//GPU includes
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
+#include <thrust/sort.h>
+
 //./fish 20000 10 200 15 5 
 
 #define PI 3.1416
@@ -14,13 +20,26 @@
 using namespace std;
 
 template <typename T>
-struct point{
+struct point2D{
+	T x;
+	T y;
+
+	__host__ __device__
+    bool operator<(const point2D<T> other) const
+    {
+        return y < other.y;
+    }
+};
+
+template <typename T>
+struct point3D{
 	T x;
 	T y;
 	T z;
 };
 
-typedef point<double> p3D;
+typedef point2D<double> p2D;
+typedef point3D<double> p3D;
 
 template <typename T>
 struct fish{
@@ -318,27 +337,32 @@ class SchoolFish{
 			for( int i = 0; i < schoolfish.size(); ++i){
 				vector<double> v_dist = ( v_norm(i) );
 
-				for( int j = 0; j < v_dist.size(); ++j){
-					int act_size = schoolfish[i].neighborhood_r.size()+ schoolfish[i].neighborhood_p.size();
-					if( act_size < k ){
-						if( v_dist[j] <= schoolfish[i].r_r ){
-							if( schoolfish[i].num != j ){
-								schoolfish[i].neighborhood_r.push_back( j );
-								// cout << j << "\t";
-							}
-						}
-						else if( v_dist[j] > schoolfish[i].r_r && v_dist[j] <= schoolfish[i].r_p ){
-							if( schoolfish[i].num != j ){
-								schoolfish[i].neighborhood_p.push_back( j );
-								// cout << j << "\t";
-							}
-						}
-					}
-					else if( act_size == k ){
-						break;
-					}
+				thrust::host_vector<p2D> h_fish;
+				thrust::device_vector<p2D> g_fish;
+
+				for( int j = 0; j < schoolfish.size(); ++j){
+					h_fish[j].x = j;
+					h_fish[j].y = v_dist[j];
 				}
-				// cout << endl;
+
+				g_fish = h_fish;
+
+				thrust::sort( g_fish.begin(), g_fish.end() );
+
+				h_fish = g_fish;
+
+				int p = 0;
+
+				while( h_fish[p].y < schoolfish[i].r_r && schoolfish[i].neighborhood_r.size() < k){
+					schoolfish[i].neighborhood_r.push_back( p );
+					p++;
+				}
+
+				p = 0;
+				while( h_fish[p].y < schoolfish[i].r_p && schoolfish[i].neighborhood_p.size() < k){
+					schoolfish[i].neighborhood_p.push_back( p );
+					p++;
+				}
 			}
 			// cout << "Good Calc neighbors" << endl;
 		}
