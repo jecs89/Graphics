@@ -183,7 +183,7 @@ class SchoolFish{
 			default_random_engine rng(random_device{}()); 		
 			uniform_real_distribution<double> dist( lim1, lim2 );
 
-			cout << "Thread: " << start << "\t" << end << endl;
+			// cout << "Thread: " << start << "\t" << end << endl;
 
 			for( int i = start; i < end; ++i){
 				schoolfish[i].num = i;
@@ -223,7 +223,7 @@ class SchoolFish{
 		    //Launching threads
 		    for ( int i = 0; i < nThreads/2; ++i){
 		    	start = i * incx, end = (i+1) * incx ;
-		    	cout << start << "\t" << end << endl;
+		    	// cout << start << "\t" << end << endl;
 		    	//bind(&SchoolFish<T>::parallel_init, this, start, end) );
 		        ths[i] = thread( &SchoolFish<T>::parallel_init, this, start, end );
 		    }
@@ -232,7 +232,7 @@ class SchoolFish{
 
 		    for ( int i = nThreads/2; i < nThreads; ++i){
 		    	start = i * incx, end = (i+1) * incx ;
-		    	cout << start << "\t" << end << endl;
+		    	// cout << start << "\t" << end << endl;
 		    	//bind(&SchoolFish<T>::parallel_init, this, start, end) );
 		        ths[i] = thread( &SchoolFish<T>::parallel_init, this, start, end );
 		    }
@@ -335,15 +335,18 @@ class SchoolFish{
 		void calc_neighboors( int k ){
 			// cout << "Star neighbors\n";
 			for( int i = 0; i < schoolfish.size(); ++i){
+				
 				vector<double> v_dist = ( v_norm(i) );
 
-				thrust::host_vector<p2D> h_fish;
-				thrust::device_vector<p2D> g_fish;
+				thrust::host_vector<p2D> h_fish( schoolfish.size() ) ;
+				thrust::device_vector<p2D> g_fish( schoolfish.size() ) ;
 
 				for( int j = 0; j < schoolfish.size(); ++j){
 					h_fish[j].x = j;
 					h_fish[j].y = v_dist[j];
 				}
+
+				// cout << "I'm alive\n";
 
 				g_fish = h_fish;
 
@@ -363,6 +366,28 @@ class SchoolFish{
 					schoolfish[i].neighborhood_p.push_back( p );
 					p++;
 				}
+
+				// for( int j = 0; j < v_dist.size(); ++j){
+				// 	int act_size = schoolfish[i].neighborhood_r.size()+ schoolfish[i].neighborhood_p.size();
+				// 	if( act_size < k ){
+				// 		if( v_dist[j] <= schoolfish[i].r_r ){
+				// 			if( schoolfish[i].num != j ){
+				// 				schoolfish[i].neighborhood_r.push_back( j );
+				// 				// cout << j << "\t";
+				// 			}
+				// 		}
+				// 		else if( v_dist[j] > schoolfish[i].r_r && v_dist[j] <= schoolfish[i].r_p ){
+				// 			if( schoolfish[i].num != j ){
+				// 				schoolfish[i].neighborhood_p.push_back( j );
+				// 				// cout << j << "\t";
+				// 			}
+				// 		}
+				// 	}
+				// 	else if( act_size == k ){
+				// 		break;
+				// 	}
+				// }
+				// // cout << endl;
 			}
 			// cout << "Good Calc neighbors" << endl;
 		}
@@ -490,7 +515,7 @@ int main( int argc, char** argv ){
 	// SchoolFish<p2D> myschool( num_fish );
 	SchoolFish<p3D> myschool( num_fish );
 	myschool.init(wa,wo);
-	myschool.print();
+	// myschool.print();
 
     ofstream result("movement_cuda.data");
 
