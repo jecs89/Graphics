@@ -5,6 +5,7 @@
 #include <string>
 #include <sstream>
 #include <fstream>
+#include <thread>
 
 //./fish 20000 10 200 15 5 
 
@@ -181,35 +182,65 @@ class SchoolFish{
 			}
 		}
 
-		void calc_neighboors( int k ){
-			for( int i = 0; i < schoolfish.size(); ++i){
+		void parallel_calc_neighboors(int start, int end, int k){
+			
+			for( int i = start; i < end; ++i){
 				vector<float> v_dist = ( v_norm(i) );
 				v_dist[i] = 10000;
-
-				// sort(v_dist.begin(), v_dist.end() );
 
 				for( int j = 0; j < v_dist.size(); ++j){
 					int act_size = schoolfish[i].neighborhood_r.size()+ schoolfish[i].neighborhood_p.size();
 					if( act_size < k ){
 						if( v_dist[j] <= schoolfish[i].r_r ){
-							if( schoolfish[i].num != j ){
+							// if( schoolfish[i].num != j ){
 								schoolfish[i].neighborhood_r.push_back( j );
 								// cout << j << "\t";
-							}
+							// }
 						}
 						else if( v_dist[j] > schoolfish[i].r_r && v_dist[j] <= schoolfish[i].r_p ){
-							if( schoolfish[i].num != j ){
+							// if( schoolfish[i].num != j ){
 								schoolfish[i].neighborhood_p.push_back( j );
 								// cout << j << "\t";
-							}
+							// }
 						}
 					}
 					else if( act_size == k ){
 						break;
 					}
 				}
-				// cout << endl;
+
 			}
+		}
+
+		void calc_neighboors( int k ){
+
+			int nThreads = thread::hardware_concurrency();  // # threads
+		    vector<thread> ths(nThreads);   // threads vector
+
+		    //dimensions of blocks
+		    double incx = double(schoolfish.size()) / nThreads;
+
+		    int start, end;
+		    
+		    //Launching threads
+		    for ( int i = 0; i < nThreads; ++i){
+		    	start = floor(i * incx), end = floor((i+1) * incx );
+		    	// cout << start << "\t" << end << endl;
+
+		        ths[i] = thread( &SchoolFish<T>::parallel_calc_neighboors, this, start, end, k );
+		    }
+
+		    // for ( int i = nThreads/2; i < nThreads; ++i){
+		    // 	start = floor(i * incx), end = floor((i+1) * incx );
+		    // 	cout << start << "\t" << end << endl;
+		    
+		    //     ths[i] = thread( &SchoolFish<T>::parallel_calc_neighboors, this, start, end, k );
+		    // }
+		    
+		    //Joining threads
+		    for ( int i = 0; i < nThreads; i++ )
+		        ths[i].join();
+			
 		}
 
 		void print_neighboors(){

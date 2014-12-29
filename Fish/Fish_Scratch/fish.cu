@@ -217,12 +217,12 @@ class SchoolFish{
 		    vector<thread> ths(nThreads);   // threads vector
 
 		    //dimensions of blocks
-		    int incx = double(schoolfish.size()) / nThreads;
+		    double incx = double(schoolfish.size()) / nThreads;
 
 		    // int start, end;
 		    //Launching threads
 		    for ( int i = 0; i < nThreads/2; ++i){
-		    	start = i * incx, end = (i+1) * incx ;
+		    	start = floor(i * incx), end = floor((i+1) * incx );
 		    	// cout << start << "\t" << end << endl;
 		    	//bind(&SchoolFish<T>::parallel_init, this, start, end) );
 		        ths[i] = thread( &SchoolFish<T>::parallel_init, this, start, end );
@@ -231,7 +231,7 @@ class SchoolFish{
 		    lim1 = -100, lim2 = -50;
 
 		    for ( int i = nThreads/2; i < nThreads; ++i){
-		    	start = i * incx, end = (i+1) * incx ;
+		    	start = floor(i * incx), end = floor((i+1) * incx );
 		    	// cout << start << "\t" << end << endl;
 		    	//bind(&SchoolFish<T>::parallel_init, this, start, end) );
 		        ths[i] = thread( &SchoolFish<T>::parallel_init, this, start, end );
@@ -275,7 +275,7 @@ class SchoolFish{
 
 			// cout << "Start CNorm\n";
 
-			int N = 10000, M = 1024;
+			int N = schoolfish.size(), M = 1024;
 			// cout << "Fish" << pos << endl;
 			
 			vector<double> ans;
@@ -332,10 +332,9 @@ class SchoolFish{
 			}
 		}
 
-		void calc_neighboors( int k ){
-			// cout << "Star neighbors\n";
-			for( int i = 0; i < schoolfish.size(); ++i){
-				
+		void parallel_calc_neighboors(int start, int end, int k){
+			
+			for( int i = start; i < end; ++i){
 				vector<double> v_dist = ( v_norm(i) );
 				v_dist[i] = 10000;
 
@@ -343,24 +342,48 @@ class SchoolFish{
 					int act_size = schoolfish[i].neighborhood_r.size()+ schoolfish[i].neighborhood_p.size();
 					if( act_size < k ){
 						if( v_dist[j] <= schoolfish[i].r_r ){
-							if( schoolfish[i].num != j ){
+							// if( schoolfish[i].num != j ){
 								schoolfish[i].neighborhood_r.push_back( j );
 								// cout << j << "\t";
-							}
+							// }
 						}
 						else if( v_dist[j] > schoolfish[i].r_r && v_dist[j] <= schoolfish[i].r_p ){
-							if( schoolfish[i].num != j ){
+							// if( schoolfish[i].num != j ){
 								schoolfish[i].neighborhood_p.push_back( j );
 								// cout << j << "\t";
-							}
+							// }
 						}
 					}
 					else if( act_size == k ){
 						break;
 					}
 				}
+
 			}
-			// cout << "Good Calc neighbors" << endl;
+		}
+
+		void calc_neighboors( int k ){
+
+			int nThreads = thread::hardware_concurrency();  // # threads
+		    vector<thread> ths(nThreads);   // threads vector
+
+		    //dimensions of blocks
+		    double incx = double(schoolfish.size()) / nThreads;
+
+		    int start, end;
+		    
+		    //Launching threads
+		    for ( int i = 0; i < nThreads; ++i){
+		    	start = floor(i * incx), end = floor((i+1) * incx );
+		    	// cout << start << "\t" << end << endl;
+
+		        ths[i] = thread( &SchoolFish<T>::parallel_calc_neighboors, this, start, end, k );
+		    }
+		    
+		    //Joining threads
+		    for ( int i = 0; i < nThreads; i++ )
+		        ths[i].join();
+			
 		}
 
 		void print_neighboors(){
