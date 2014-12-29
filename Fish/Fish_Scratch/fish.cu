@@ -337,57 +337,28 @@ class SchoolFish{
 			for( int i = 0; i < schoolfish.size(); ++i){
 				
 				vector<double> v_dist = ( v_norm(i) );
+				v_dist[i] = 10000;
 
-				thrust::host_vector<p2D> h_fish( schoolfish.size() ) ;
-				thrust::device_vector<p2D> g_fish( schoolfish.size() ) ;
-
-				for( int j = 0; j < schoolfish.size(); ++j){
-					h_fish[j].x = j;
-					h_fish[j].y = v_dist[j];
+				for( int j = 0; j < v_dist.size(); ++j){
+					int act_size = schoolfish[i].neighborhood_r.size()+ schoolfish[i].neighborhood_p.size();
+					if( act_size < k ){
+						if( v_dist[j] <= schoolfish[i].r_r ){
+							if( schoolfish[i].num != j ){
+								schoolfish[i].neighborhood_r.push_back( j );
+								// cout << j << "\t";
+							}
+						}
+						else if( v_dist[j] > schoolfish[i].r_r && v_dist[j] <= schoolfish[i].r_p ){
+							if( schoolfish[i].num != j ){
+								schoolfish[i].neighborhood_p.push_back( j );
+								// cout << j << "\t";
+							}
+						}
+					}
+					else if( act_size == k ){
+						break;
+					}
 				}
-
-				// cout << "I'm alive\n";
-
-				g_fish = h_fish;
-
-				thrust::sort( g_fish.begin(), g_fish.end() );
-
-				h_fish = g_fish;
-
-				int p = 0;
-
-				while( h_fish[p].y < schoolfish[i].r_r && schoolfish[i].neighborhood_r.size() < k){
-					schoolfish[i].neighborhood_r.push_back( p );
-					p++;
-				}
-
-				p = 0;
-				while( h_fish[p].y < schoolfish[i].r_p && schoolfish[i].neighborhood_p.size() < k){
-					schoolfish[i].neighborhood_p.push_back( p );
-					p++;
-				}
-
-				// for( int j = 0; j < v_dist.size(); ++j){
-				// 	int act_size = schoolfish[i].neighborhood_r.size()+ schoolfish[i].neighborhood_p.size();
-				// 	if( act_size < k ){
-				// 		if( v_dist[j] <= schoolfish[i].r_r ){
-				// 			if( schoolfish[i].num != j ){
-				// 				schoolfish[i].neighborhood_r.push_back( j );
-				// 				// cout << j << "\t";
-				// 			}
-				// 		}
-				// 		else if( v_dist[j] > schoolfish[i].r_r && v_dist[j] <= schoolfish[i].r_p ){
-				// 			if( schoolfish[i].num != j ){
-				// 				schoolfish[i].neighborhood_p.push_back( j );
-				// 				// cout << j << "\t";
-				// 			}
-				// 		}
-				// 	}
-				// 	else if( act_size == k ){
-				// 		break;
-				// 	}
-				// }
-				// // cout << endl;
 			}
 			// cout << "Good Calc neighbors" << endl;
 		}
@@ -519,21 +490,33 @@ int main( int argc, char** argv ){
 
     ofstream result("movement_cuda.data");
 
-	for( int i = 0; i < iter; ++i){
-		// cout << "Iter: " << i << endl;
-		// myschool.print_distances();
-		myschool.movement(t);
-		myschool.calc_neighboors(k);
-		// myschool.print_neighboors();
-		myschool.update_c();
-		// myschool.print();
-		myschool.print2file( result, 2);
-	}
-
-	result.close();	
-
 	time_t timer2 = time(0); 
-    cout <<"\nTiempo total: " << difftime(timer2, timer) << endl;
+    cout <<"\nTiempo Inicializacio\'n: " << difftime(timer2, timer) << endl;
+
+	for( int i = 0; i < iter; ++i){
+		// cout << i << endl;
+		// myschool.print_distances();
+		timer = time(0); 
+		myschool.movement(t);
+		timer2 = time(0); 
+
+		cout <<"\nTiempo Movimiento " << difftime(timer2, timer) << endl;
+
+		timer = time(0); 
+		myschool.calc_neighboors(k);
+		timer2 = time(0);
+
+		cout <<"\nTiempo Calc Vecinos " << difftime(timer2, timer) << endl;
+
+		// myschool.print_neighboors();
+		timer = time(0); 
+		myschool.update_c();
+		timer2 = time(0);
+
+		cout <<"\nTiempo Act Pos " << difftime(timer2, timer) << endl;
+		// myschool.print();
+		// myschool.print2file( result, 2);
+	}
 
 	return 0;
 }

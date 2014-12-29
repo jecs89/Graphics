@@ -186,6 +186,8 @@ class SchoolFish{
 				vector<float> v_dist = ( v_norm(i) );
 				v_dist[i] = 10000;
 
+				// sort(v_dist.begin(), v_dist.end() );
+
 				for( int j = 0; j < v_dist.size(); ++j){
 					int act_size = schoolfish[i].neighborhood_r.size()+ schoolfish[i].neighborhood_p.size();
 					if( act_size < k ){
@@ -330,21 +332,38 @@ int main( int argc, char** argv ){
 
     ofstream result("movement.data");
 
+    time_t timer2 = time(0); 
+    cout <<"\nTiempo Inicializacio\'n: " << difftime(timer2, timer) << endl;
+
 	for( int i = 0; i < iter; ++i){
 		// cout << i << endl;
 		// myschool.print_distances();
+		timer = time(0); 
 		myschool.movement(t);
+		timer2 = time(0); 
+
+		cout <<"\nTiempo Movimiento " << difftime(timer2, timer) << endl;
+
+		timer = time(0); 
 		myschool.calc_neighboors(k);
+		timer2 = time(0);
+
+		cout <<"\nTiempo Calc Vecinos " << difftime(timer2, timer) << endl;
+
 		// myschool.print_neighboors();
+		timer = time(0); 
 		myschool.update_c();
+		timer2 = time(0);
+
+		cout <<"\nTiempo Act Pos " << difftime(timer2, timer) << endl;
 		// myschool.print();
-		myschool.print2file( result, 2);
+		// myschool.print2file( result, 2);
 	}
 
 	result.close();	
 
-	time_t timer2 = time(0); 
-    cout <<"\nTiempo total: " << difftime(timer2, timer) << endl;
+	
+    
 
 	return 0;
 }
