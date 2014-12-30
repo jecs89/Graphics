@@ -159,6 +159,34 @@ double calc_norm( p3D x, p3D y){
 	return sqrtf( powf(x.x-y.x,2) + powf( x.y-y.y,2) + powf( x.z-y.z,2) );
 }
 
+// params = { size, r_r, r_p}
+__global__ void calc_n(p3D* schoolfish, double* params, int* p_r, int* p_p){
+	int index = threadIdx.x + blockIdx.x*blockDim.x;
+
+	double* norm;
+	norm = (double*)malloc( params[0] * sizeof(double) );
+
+	for( int i = 0; i < params[0]; ++i){
+		norm[i] = sqrtf(powf(schoolfish[i].x - schoolfish[index].x,2) + powf(schoolfish[i].y - schoolfish[index].y,2)
+				  + powf(schoolfish[i].z - schoolfish[index].z,2));
+	}
+
+	norm[index] = 10000;
+
+	int x = 0, y = 0, act_size = 0;
+
+	for( int i = 0; i < params[0] && act_size < params[3] ; ++i){
+		if( norm[i] <= params[1] ){
+			p_r[x+index] = i;
+			x++; act_size++;
+		}
+		else if( norm[i] > params[1] && norm[i] <= params[2] && act_size < params[3]){
+			p_p[y+index] = i;
+			y++; act_size++;
+		}
+	}
+}
+
 template <typename T>
 class SchoolFish{
 	vector< fish< T > > schoolfish;
@@ -198,8 +226,8 @@ class SchoolFish{
 
 				schoolfish[i].s = 0.1;
 				schoolfish[i].theta = PI/6;
-				schoolfish[i].r_r = 3;
-				schoolfish[i].r_p = 5;
+				schoolfish[i].r_r = 6;
+				schoolfish[i].r_p = 10;
 				// schoolfish[i].w_a = wa;
 				// schoolfish[i].w_o = wo;
 
@@ -271,20 +299,28 @@ class SchoolFish{
 			}
 		}
 
-		vector<double> v_norm(int pos){
 
-			// cout << "Start CNorm\n";
+		void calc_neighboors( int k ){
 
+			// cout << "Start Calc N\n";
+	
 			int N = schoolfish.size(), M = 1024;
 			// cout << "Fish" << pos << endl;
 			
-			vector<double> ans;
-
-			int size_ans = schoolfish.size() * sizeof(double);
 			int size_school = v_p3D.size() * sizeof( p3D );
 
-			double* ansptr;
-			ansptr = (double *)malloc( size_ans );
+			int* p_r,* p_p; 
+			p_r = (int *)malloc( schoolfish.size() * k * sizeof(int) );
+			p_p = (int *)malloc( schoolfish.size() * k * sizeof(int) );
+
+			double* params;
+			params = (double *)malloc( 4 * sizeof(double) );
+			params[0] = N, params[1] = schoolfish[0].r_r, params[2] = schoolfish[0].r_p, params[3] = k;
+
+			//Initialization
+			for( int i = 0; i < schoolfish.size() * k; ++i){
+				p_r[i] = p_p[i] = -1;
+			}
 
 			//Copy info from schoolfish to schoolptr
 			p3D* schoolptr;
@@ -294,96 +330,57 @@ class SchoolFish{
 
 			//Copy for devices
 			p3D* d_schoolptr;
-			double* d_ansptr;
+			int* d_p_r,* d_p_p;
 
-			// // // Allocate space for device copies of schoolptr
+			// Allocate space for device copies of schoolptr
 			cudaMalloc((void **)&d_schoolptr, size_school );
-			cudaMalloc((void **)&d_ansptr, size_ans );
+			cudaMalloc((void **)&d_p_r, schoolfish.size() * k * sizeof(int) );
+			cudaMalloc((void **)&d_p_p, schoolfish.size() * k * sizeof(int) );
 			
-			// // Copy inputs to device
+			// Copy inputs to device
 			cudaMemcpy(d_schoolptr, schoolptr, size_school, cudaMemcpyHostToDevice);  // Args: Dir. destino, Dir. origen, tamano de dato, sentido del envio
+			cudaMemcpy(d_p_r, p_r, schoolfish.size() * k * sizeof(int), cudaMemcpyHostToDevice);
+			cudaMemcpy(d_p_p, p_p, schoolfish.size() * k * sizeof(int), cudaMemcpyHostToDevice);
 
-			// // Launch add() kernel on GPU
+			// Launch add() kernel on GPU
 			// cout << "Start Cuda Call\n";
-			cuda_norm<<<(N+M-1)/M,M>>> ( d_schoolptr, pos, d_ansptr );
+			calc_n<<<(N+M-1)/M,M>>> ( d_schoolptr, params, d_p_r, d_p_p );
 			// cout << "End Cuda Call\n";
 
-			// // Copy result back to host
-			cudaMemcpy(ansptr, d_ansptr, size_ans, cudaMemcpyDeviceToHost);
+			// Copy result back to host
+			cudaMemcpy(p_r, d_p_r, schoolfish.size() * k * sizeof(int), cudaMemcpyDeviceToHost);
+			cudaMemcpy(p_p, d_p_p, schoolfish.size() * k * sizeof(int), cudaMemcpyDeviceToHost);
 
-			ptr2vector( ansptr, ans, schoolfish.size() );
+			// cout << "I'm alive\n";
 
-			// printelem( ans );
+			int n = 0;
+			for( int i = 0; i < schoolfish.size() * k; ++i){
+				// vector<int> v_r(schoolfish.size() * k), v_p(schoolfish.size() * k);
+
+				// ptr2vector( p_r, v_r, schoolfish.size() * k );
+				// ptr2vector( p_p, v_p, schoolfish.size() * k );
+
+
+				for( int j = 0; j < schoolfish.size() * k && p_r[j] != -1; ++j){
+					schoolfish[n].neighborhood_r.push_back( p_r[j] );
+				}
+
+				for( int j = 0; j < schoolfish.size() * k && p_p[j] != -1; ++j){
+					schoolfish[n].neighborhood_p.push_back( p_p[j] );
+				}
+				n++;
+			}
 
 			// Cleanup
 			free(schoolptr);
-			free(ansptr);
-			cudaFree(d_ansptr);
+			free(p_r);
+			free(p_p);
 			cudaFree(d_schoolptr);
+			cudaFree(d_p_r);
+			cudaFree(d_p_p);
 
 			// cout << "Finish CNorm\n";
 
-			return ans;
-		}
-
-		void print_distances(){
-			for( int i = 0; i < schoolfish.size(); ++i){
-				printelem( v_norm(i) );
-			}
-		}
-
-		void parallel_calc_neighboors(int start, int end, int k){
-			
-			for( int i = start; i < end; ++i){
-				vector<double> v_dist = ( v_norm(i) );
-				v_dist[i] = 10000;
-
-				for( int j = 0; j < v_dist.size(); ++j){
-					int act_size = schoolfish[i].neighborhood_r.size()+ schoolfish[i].neighborhood_p.size();
-					if( act_size < k ){
-						if( v_dist[j] <= schoolfish[i].r_r ){
-							// if( schoolfish[i].num != j ){
-								schoolfish[i].neighborhood_r.push_back( j );
-								// cout << j << "\t";
-							// }
-						}
-						else if( v_dist[j] > schoolfish[i].r_r && v_dist[j] <= schoolfish[i].r_p ){
-							// if( schoolfish[i].num != j ){
-								schoolfish[i].neighborhood_p.push_back( j );
-								// cout << j << "\t";
-							// }
-						}
-					}
-					else if( act_size == k ){
-						break;
-					}
-				}
-
-			}
-		}
-
-		void calc_neighboors( int k ){
-
-			int nThreads = thread::hardware_concurrency();  // # threads
-		    vector<thread> ths(nThreads);   // threads vector
-
-		    //dimensions of blocks
-		    double incx = double(schoolfish.size()) / nThreads;
-
-		    int start, end;
-		    
-		    //Launching threads
-		    for ( int i = 0; i < nThreads; ++i){
-		    	start = floor(i * incx), end = floor((i+1) * incx );
-		    	// cout << start << "\t" << end << endl;
-
-		        ths[i] = thread( &SchoolFish<T>::parallel_calc_neighboors, this, start, end, k );
-		    }
-		    
-		    //Joining threads
-		    for ( int i = 0; i < nThreads; i++ )
-		        ths[i].join();
-			
 		}
 
 		void print_neighboors(){
@@ -489,19 +486,21 @@ inline void str2num(string str, T& num){
 // 	cout << a[0] << endl;
 // }
 
+
 int main( int argc, char** argv ){
 
-	time_t timer = time(0); 
+	vector<time_t> timer(10);
+	timer[0] = time(0); 
 
 	//Params of SchoolFish
 	int num_fish, k, iter;
 	string par = argv[1]; str2num( par, num_fish);
 	par = argv[2]; str2num( par, k);
 
-	double t = 1;
+	// float t = 1;
 	par = argv[3]; str2num( par, iter);
 
-	double wa, wo;
+	float wa, wo;
 	par = argv[4]; str2num( par, wa);
 	par = argv[5]; str2num( par, wo);
 
@@ -513,36 +512,50 @@ int main( int argc, char** argv ){
 
     ofstream result("movement_cuda.data");
 
-	time_t timer2 = time(0); 
-    cout <<"\nTiempo Inicializacio\'n: " << difftime(timer2, timer) << endl;
+    timer[1] = time(0); 
+    cout <<"\nTiempo Inicializacio\'n: " << difftime(timer[1], timer[0]) << endl;
+
+    timer[2] = 0;
+    timer[3] = 0;
+    timer[4] = 0;
 
 	for( int i = 0; i < iter; ++i){
 		// cout << i << endl;
 		// myschool.print_distances();
-		timer = time(0); 
-		myschool.movement(t);
-		timer2 = time(0); 
+		timer[0] = time(0); 
+		// myschool.movement(t);
+		timer[1] = time(0); 
 
-		cout <<"\nTiempo Movimiento " << difftime(timer2, timer) << endl;
+		// cout <<"\nTiempo Movimiento " << difftime(timer[1], timer[0]) << endl;
 
-		timer = time(0); 
+		timer[2] += difftime(timer[1], timer[0]);
+
+		timer[0] = time(0);
 		myschool.calc_neighboors(k);
-		timer2 = time(0);
+		timer[1] = time(0);
 
-		cout <<"\nTiempo Calc Vecinos " << difftime(timer2, timer) << endl;
+		// cout <<"\nTiempo Calc Vecinos " << difftime(timer[1], timer[0]) << endl;
+
+		timer[3] += difftime(timer[1], timer[0]);
 
 		// myschool.print_neighboors();
-		timer = time(0); 
+		timer[0] = time(0); 
 		myschool.update_c();
-		timer2 = time(0);
+		timer[1] = time(0);
 
-		cout <<"\nTiempo Act Pos " << difftime(timer2, timer) << endl;
+		// cout <<"\nTiempo Act Pos " << difftime(timer[1], timer[0]) << endl;
+
+		timer[4] += difftime(timer[1], timer[0]);
+
 		// myschool.print();
-		// myschool.print2file( result, 2);
+		myschool.print2file( result, 2);
 	}
+
+	cout <<"\nTiempo T Movimiento " << timer[2] << endl;
+	cout <<"\nTiempo T Calc Vecinos  " << timer[3] << endl;
+	cout <<"\nTiempo T Act Pos " << timer[4] << endl;
+
+	result.close();	
 
 	return 0;
 }
-
-
-
