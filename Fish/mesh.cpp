@@ -5,11 +5,15 @@
 #include "TextureManager.h"
 #include "objloader.h"
 #include "controls.h"
+#include <stdio.h>
 
 // Include GLM
 #include <glm/gtc/matrix_transform.hpp>
 
-Mesh::Mesh(const char* filenameFragment, const char* filenameVertex)
+const char* filenameFragment = "Shaders/TransformVertexShader.vertexshader";
+const char* filenameVertex = "Shaders/TextureFragmentShader.fragmentshader";
+
+Mesh::Mesh()
 {
 	glGenVertexArrays(1, &vertexArrayID);
 	glBindVertexArray(vertexArrayID);
@@ -119,7 +123,14 @@ GLuint Mesh::getProgramID()
 	return programID;
 }
 
-
+void Mesh::printModelMatrix(){
+	for( int i = 0; i < 4; ++i){
+		for(int j = 0; j < 4; ++j){
+			printf("%f\t", modelMatrix[i][j] );
+		}
+		printf("\n");
+	}
+}
 
 glm::mat4 Mesh::getModelMatrix()
 {

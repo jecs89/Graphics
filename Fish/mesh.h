@@ -7,10 +7,11 @@
 class Mesh
 {
 public:
-	Mesh(const char* filenameFragment, const char* filenameVertex);
+	Mesh();
 	~Mesh();
 	GLuint getProgramID();
 	void draw(glm::mat4 MVP);
+	void printModelMatrix();
 	glm::mat4 getModelMatrix();
 	void setModelMatrix(glm::mat4 newModelMatrix);
 	void setColorTexture(const char* filename, const char* name);

@@ -497,7 +497,7 @@ int main( int argc, char** argv ){
 	string par = argv[1]; str2num( par, num_fish);
 	par = argv[2]; str2num( par, k);
 
-	// float t = 1;
+	float t = 1;
 	par = argv[3]; str2num( par, iter);
 
 	float wa, wo;
@@ -523,7 +523,7 @@ int main( int argc, char** argv ){
 		// cout << i << endl;
 		// myschool.print_distances();
 		timer[0] = time(0); 
-		// myschool.movement(t);
+		myschool.movement(t);
 		timer[1] = time(0); 
 
 		// cout <<"\nTiempo Movimiento " << difftime(timer[1], timer[0]) << endl;
