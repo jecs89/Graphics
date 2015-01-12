@@ -13,6 +13,8 @@
 #include <thrust/host_vector.h>
 #include <thrust/sort.h>
 
+#include "glfish.cuh"
+
 //./fish 20000 10 200 15 5 
 
 #define PI 3.1416
@@ -187,8 +189,12 @@ __global__ void calc_n(p3D* schoolfish, double* params, int* p_r, int* p_p){
 	}
 }
 
+
+
 template <typename T>
 class SchoolFish{
+
+	public:
 	vector< fish< T > > schoolfish;
 	int lim1, lim2;
 	double wa, wo;
@@ -206,7 +212,7 @@ class SchoolFish{
 	}
 
 		void parallel_init(int start, int end){
-			int scale = 10;
+			int scale = 5, scale2=100;
 
 			default_random_engine rng(random_device{}()); 		
 			uniform_real_distribution<double> dist( lim1, lim2 );
@@ -216,18 +222,18 @@ class SchoolFish{
 			for( int i = start; i < end; ++i){
 				schoolfish[i].num = i;
 
-				schoolfish[i].c.x = dist(rng);
-				schoolfish[i].c.y = dist(rng);
-				schoolfish[i].c.z = dist(rng);
+				schoolfish[i].c.x = dist(rng)/scale2;
+				schoolfish[i].c.y = dist(rng)/scale2;
+				schoolfish[i].c.z = dist(rng)/scale2;
 
 				schoolfish[i].v.x = dist(rng)/scale;
 				schoolfish[i].v.y = dist(rng)/scale;
-				schoolfish[i].v.z = dist(rng)/scale;
+				schoolfish[i].v.z = dist(rng)/scale+1;
 
-				schoolfish[i].s = 0.1;
-				schoolfish[i].theta = PI/6;
-				schoolfish[i].r_r = 6;
-				schoolfish[i].r_p = 10;
+				schoolfish[i].s = 0.02;
+				schoolfish[i].theta = PI/3;
+				schoolfish[i].r_r = 50/scale2;
+				schoolfish[i].r_p = 60/scale2;
 				// schoolfish[i].w_a = wa;
 				// schoolfish[i].w_o = wo;
 
@@ -236,6 +242,9 @@ class SchoolFish{
 		}
 
 		void init( double _wa, double _wo ){
+
+			//data = (Vertex *) malloc( schoolfish.size() * sizeof(Vertex) );
+
 			wa = _wa; wo = _wo;
 
 			lim1 = 50, lim2 = 100;
@@ -249,16 +258,25 @@ class SchoolFish{
 
 		    // int start, end;
 		    //Launching threads
-		    for ( int i = 0; i < nThreads/2; ++i){
+		    for ( int i = 0; i < nThreads/3; ++i){
 		    	start = floor(i * incx), end = floor((i+1) * incx );
 		    	// cout << start << "\t" << end << endl;
 		    	//bind(&SchoolFish<T>::parallel_init, this, start, end) );
 		        ths[i] = thread( &SchoolFish<T>::parallel_init, this, start, end );
 		    }
 
-		    lim1 = -100, lim2 = -50;
+		    lim2 = -100, lim1 = -50;
 
-		    for ( int i = nThreads/2; i < nThreads; ++i){
+		    for ( int i = nThreads/3; i < nThreads*2/3; ++i){
+		    	start = floor(i * incx), end = floor((i+1) * incx );
+		    	// cout << start << "\t" << end << endl;
+		    	//bind(&SchoolFish<T>::parallel_init, this, start, end) );
+		        ths[i] = thread( &SchoolFish<T>::parallel_init, this, start, end );
+		    }
+
+		    lim2 = 30, lim1 = 50;
+
+		    for ( int i = nThreads*2/3; i < nThreads; ++i){
 		    	start = floor(i * incx), end = floor((i+1) * incx );
 		    	// cout << start << "\t" << end << endl;
 		    	//bind(&SchoolFish<T>::parallel_init, this, start, end) );
@@ -268,6 +286,8 @@ class SchoolFish{
 		    //Joining threads
 		    for ( int i = 0; i < nThreads; i++ )
 		        ths[i].join();
+
+		    
 		}
 
 		void print(){
@@ -294,7 +314,7 @@ class SchoolFish{
 					file << setprecision(dec) << setw(pos) << schoolfish[i].num << setw(pos) << schoolfish[i].c.x << setw(pos) << schoolfish[i].c.y << setw(pos) << schoolfish[i].c.z << endl;
 				}
 				else if( type == 2){
-					file << setprecision(dec) << schoolfish[i].c.x << "," <<  schoolfish[i].c.y << "," << schoolfish[i].c.z<< endl;	
+					file << "{ {" << setprecision(dec) << schoolfish[i].c.x << "," <<  schoolfish[i].c.y << "," << schoolfish[i].c.z << ", 1.0f }, {" << "1.0f, 1.0f, 0.0f, 1.0f } },"<< endl; //<< "," << 1 << endl;	
 				}
 			}
 		}
@@ -461,6 +481,21 @@ class SchoolFish{
 				v.z = v.z * -1;
 			}
 		}
+
+		void passtoptr(){
+
+			for( int i = 0; i < schoolfish.size(); ++i){
+				data[i].XYZW[0] = (GLfloat)schoolfish[i].c.x;
+				data[i].XYZW[1] = (GLfloat)schoolfish[i].c.y;
+				data[i].XYZW[2] = (GLfloat)schoolfish[i].c.z;
+				data[i].XYZW[3] = (GLfloat)1.0f;
+
+				data[i].RGBA[0] = (GLfloat)1.0f;
+				data[i].RGBA[1] = (GLfloat)1.0f;
+				data[i].RGBA[2] = (GLfloat)0.0f;
+				data[i].RGBA[3] = (GLfloat)1.0f;
+			}
+		}
 };
 
 template <typename T>
@@ -494,7 +529,7 @@ int main( int argc, char** argv ){
 
 	//Params of SchoolFish
 	int num_fish, k, iter;
-	string par = argv[1]; str2num( par, num_fish);
+	string par = argv[1]; str2num( par, num_fish); //globalsize = num_fish;
 	par = argv[2]; str2num( par, k);
 
 	float t = 1;
@@ -518,6 +553,35 @@ int main( int argc, char** argv ){
     timer[2] = 0;
     timer[3] = 0;
     timer[4] = 0;
+
+
+  GLenum GlewInitResult;
+
+  glutInit(&argc, argv);
+  
+  glutInitContextVersion(4, 0);
+  glutInitContextFlags(GLUT_FORWARD_COMPATIBLE);
+  glutInitContextProfile(GLUT_CORE_PROFILE);
+
+  glutSetOption(
+    GLUT_ACTION_ON_WINDOW_CLOSE,
+    GLUT_ACTION_GLUTMAINLOOP_RETURNS
+  );
+  
+  glutInitWindowSize(CurrentWidth, CurrentHeight);
+
+  glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
+
+  WindowHandle = glutCreateWindow(WINDOW_TITLE_PREFIX);
+
+  if(WindowHandle < 1) {
+    fprintf(
+      stderr,
+      "ERROR: Could not create a new rendering window.\n"
+    );
+    exit(EXIT_FAILURE);
+  }
+  glutReshapeFunc(ResizeFunction);
 
 	for( int i = 0; i < iter; ++i){
 		// cout << i << endl;
@@ -549,13 +613,73 @@ int main( int argc, char** argv ){
 
 		// myschool.print();
 		myschool.print2file( result, 2);
+
+		myschool.passtoptr();
+
+		
+		glutDisplayFunc(RenderFunction);
+		glutIdleFunc(IdleFunction);
+
+		glutKeyboardFunc(processNormalKeys);
+		// glutSpecialFunc(processSpecialKeys);
+	  
+		glutTimerFunc(0, TimerFunction, 0);
+	  	// glutCloseFunc(Cleanup);
+	  
+	  	glewExperimental = GL_TRUE;
+	  	GlewInitResult = glewInit();
+
+	  	if (GLEW_OK != GlewInitResult) {
+	    	fprintf(
+	    	  	stderr,
+		      	"ERROR: %s\n",
+		      	glewGetErrorString(GlewInitResult)
+	    		);
+	    	exit(EXIT_FAILURE);
+	  	}
+	  
+	  	fprintf(
+		    stdout,
+		    "INFO: OpenGL Version: %s\n",
+		    glGetString(GL_VERSION)
+	  	);
+
+		CreateShaders();
+		CreateVBO();
+
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
+		// glFinish();
+
+
+		glutMainLoop();	
+
+		exit(EXIT_SUCCESS);
 	}
+
+
+
+
 
 	cout <<"\nTiempo T Movimiento " << timer[2] << endl;
 	cout <<"\nTiempo T Calc Vecinos  " << timer[3] << endl;
 	cout <<"\nTiempo T Act Pos " << timer[4] << endl;
 
 	result.close();	
+
+
+
+	// for( int i = 0; i < myschool.schoolfish.size(); ++i){
+	// 	cout << data[i].XYZW[0] << "\t" << data[i].XYZW[1] << "\t" << data[i].XYZW[2] << "\t" << data[i].XYZW[3] << "\t"
+	// 		 << data[i].RGBA[0] << "\t" << data[i].RGBA[1] << "\t" << data[i].RGBA[2] << "\t" << data[i].RGBA[3] << "\n" ;
+	// }
+
+	// Initialize(argc, argv);
+
+ //  	glutMainLoop();
+  
+ //  	exit(EXIT_SUCCESS);
+
 
 	return 0;
 }
