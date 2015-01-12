@@ -8,12 +8,78 @@
 #include <fstream>
 #include <thread>
 
-//GPU includes
-#include <thrust/device_vector.h>
-#include <thrust/host_vector.h>
-#include <thrust/sort.h>
 
-#include "glfish.cuh"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <GL/glew.h>
+#include <GL/freeglut.h>
+#define WINDOW_TITLE_PREFIX "Chapter 2"
+
+typedef struct
+{
+  float XYZW[4];
+  float RGBA[4];
+} Vertex;
+
+Vertex data[100000];
+int globalsize;
+
+int
+  CurrentWidth = 800,
+  CurrentHeight = 600,
+  WindowHandle = 0;
+
+unsigned FrameCount = 0;
+
+GLuint
+  VertexShaderId,
+  FragmentShaderId,
+  ProgramId,
+  VaoId,
+  VboId;
+
+const GLchar* VertexShader =
+{
+  "#version 400\n"\
+
+  "layout(location=0) in vec4 in_Position;\n"\
+  "layout(location=1) in vec4 in_Color;\n"\
+  "out vec4 ex_Color;\n"\
+
+  "void main(void)\n"\
+  "{\n"\
+  "  gl_Position = in_Position;\n"\
+  "  ex_Color = in_Color;\n"\
+  "}\n"
+};
+
+const GLchar* FragmentShader =
+{
+  "#version 400\n"\
+
+  "in vec4 ex_Color;\n"\
+  "out vec4 out_Color;\n"\
+
+  "void main(void)\n"\
+  "{\n"\
+  "  out_Color = ex_Color;\n"\
+  "}\n"
+};
+
+void Initialize(int, char*[]);
+void InitWindow(int, char*[]);
+void ResizeFunction(int, int);
+void RenderFunction(void);
+void TimerFunction(int);
+void IdleFunction(void);
+void Cleanup(void);
+void CreateVBO(void);
+void DestroyVBO(void);
+void CreateShaders(void);
+void DestroyShaders(void);
+
+void processNormalKeys(unsigned char key, int x, int y);
 
 //./fish 20000 10 200 15 5 
 
@@ -212,7 +278,7 @@ class SchoolFish{
 	}
 
 		void parallel_init(int start, int end){
-			int scale = 5, scale2=100;
+			int scale = 50, scale2=100;
 
 			default_random_engine rng(random_device{}()); 		
 			uniform_real_distribution<double> dist( lim1, lim2 );
@@ -521,42 +587,46 @@ inline void str2num(string str, T& num){
 // 	cout << a[0] << endl;
 // }
 
+SchoolFish<p3D> globalschool( 10000 );
+float globalt = 1; int globalk = 5;
 
-int main( int argc, char** argv ){
+void Initialize(int argc, char* argv[])
+{
 
-	vector<time_t> timer(10);
-	timer[0] = time(0); 
+  globalschool.init(7,1);
 
-	//Params of SchoolFish
-	int num_fish, k, iter;
-	string par = argv[1]; str2num( par, num_fish); //globalsize = num_fish;
-	par = argv[2]; str2num( par, k);
-
-	float t = 1;
-	par = argv[3]; str2num( par, iter);
-
-	float wa, wo;
-	par = argv[4]; str2num( par, wa);
-	par = argv[5]; str2num( par, wo);
-
-	//Initialization of values
-	// SchoolFish<p2D> myschool( num_fish );
-	SchoolFish<p3D> myschool( num_fish );
-	myschool.init(wa,wo);
-	// myschool.print();
-
-    ofstream result("movement_cuda.data");
-
-    timer[1] = time(0); 
-    cout <<"\nTiempo Inicializacio\'n: " << difftime(timer[1], timer[0]) << endl;
-
-    timer[2] = 0;
-    timer[3] = 0;
-    timer[4] = 0;
-
+  globalschool.print();
 
   GLenum GlewInitResult;
 
+  InitWindow(argc, argv);
+  
+  glewExperimental = GL_TRUE;
+  GlewInitResult = glewInit();
+
+  if (GLEW_OK != GlewInitResult) {
+    fprintf(
+      stderr,
+      "ERROR: %s\n",
+      glewGetErrorString(GlewInitResult)
+    );
+    exit(EXIT_FAILURE);
+  }
+  
+  fprintf(
+    stdout,
+    "INFO: OpenGL Version: %s\n",
+    glGetString(GL_VERSION)
+  );
+
+  CreateShaders();
+  CreateVBO();
+
+  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+}
+
+void InitWindow(int argc, char* argv[])
+{
   glutInit(&argc, argv);
   
   glutInitContextVersion(4, 0);
@@ -581,81 +651,356 @@ int main( int argc, char** argv ){
     );
     exit(EXIT_FAILURE);
   }
+  
   glutReshapeFunc(ResizeFunction);
+  glutDisplayFunc(RenderFunction);
+  glutIdleFunc(IdleFunction);
 
-	for( int i = 0; i < iter; ++i){
+  glutKeyboardFunc(processNormalKeys);
+
+  glutTimerFunc(0, TimerFunction, 0);
+  glutCloseFunc(Cleanup);
+}
+
+void ResizeFunction(int Width, int Height)
+{
+  CurrentWidth = Width;
+  CurrentHeight = Height;
+  glViewport(0, 0, CurrentWidth, CurrentHeight);
+}
+
+void RenderFunction(void)
+{
+  ++FrameCount;
+
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  globalschool.movement(globalt);
+	
+globalschool.calc_neighboors(globalk);
+	
+globalschool.update_c();
+
+globalschool.passtoptr();
+  
+  glDrawArrays(GL_POINTS, 0, globalsize);
+
+  glutSwapBuffers();
+}
+
+void IdleFunction(void)
+{
+  glutPostRedisplay();
+}
+
+void TimerFunction(int Value)
+{
+  if (0 != Value) {
+    char* TempString = (char*)
+      malloc(512 + strlen(WINDOW_TITLE_PREFIX));
+
+    sprintf(
+      TempString,
+      "%s: %d Frames Per Second @ %d x %d",
+      WINDOW_TITLE_PREFIX,
+      FrameCount * 4,
+      CurrentWidth,
+      CurrentHeight
+    );
+
+    glutSetWindowTitle(TempString);
+    free(TempString);
+  }
+  
+  FrameCount = 0;
+  glutTimerFunc(250, TimerFunction, 1);
+}
+
+void Cleanup(void)
+{
+  DestroyShaders();
+  DestroyVBO();
+}
+
+void CreateVBO(void)
+{
+  /*Vertex Vertices[] =
+  {
+    { { -0.8f, -0.8f, 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+    { {  0.0f,  0.8f, 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+    { {  0.8f, -0.8f, 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
+  };*/
+
+  GLenum ErrorCheckValue = glGetError();
+  const size_t BufferSize = sizeof(data);
+  const size_t VertexSize = sizeof(data[0]);
+  const size_t RgbOffset = sizeof(data[0].XYZW);
+  
+  glGenVertexArrays(1, &VaoId);
+  glBindVertexArray(VaoId);
+
+  glGenBuffers(1, &VboId);
+  glBindBuffer(GL_ARRAY_BUFFER, VboId);
+  glBufferData(GL_ARRAY_BUFFER, BufferSize, data, GL_STATIC_DRAW);
+
+  glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, VertexSize, 0);
+  glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, VertexSize, (GLvoid*)RgbOffset);
+
+  glEnableVertexAttribArray(0);
+  glEnableVertexAttribArray(1);
+
+  ErrorCheckValue = glGetError();
+  if (ErrorCheckValue != GL_NO_ERROR)
+  {
+    fprintf(
+      stderr,
+      "ERROR: Could not create a VBO: %s \n",
+      gluErrorString(ErrorCheckValue)
+    );
+
+    exit(-1);
+  }
+}
+
+void DestroyVBO(void)
+{
+  GLenum ErrorCheckValue = glGetError();
+
+  glDisableVertexAttribArray(1);
+  glDisableVertexAttribArray(0);
+  
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glDeleteBuffers(1, &VboId);
+
+  glBindVertexArray(0);
+  glDeleteVertexArrays(1, &VaoId);
+
+  ErrorCheckValue = glGetError();
+  if (ErrorCheckValue != GL_NO_ERROR)
+  {
+    fprintf(
+      stderr,
+      "ERROR: Could not destroy the VBO: %s \n",
+      gluErrorString(ErrorCheckValue)
+    );
+
+    exit(-1);
+  }
+}
+
+void CreateShaders(void)
+{
+  GLenum ErrorCheckValue = glGetError();
+  
+  VertexShaderId = glCreateShader(GL_VERTEX_SHADER);
+  glShaderSource(VertexShaderId, 1, &VertexShader, NULL);
+  glCompileShader(VertexShaderId);
+
+  FragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(FragmentShaderId, 1, &FragmentShader, NULL);
+  glCompileShader(FragmentShaderId);
+
+  ProgramId = glCreateProgram();
+    glAttachShader(ProgramId, VertexShaderId);
+    glAttachShader(ProgramId, FragmentShaderId);
+  glLinkProgram(ProgramId);
+  glUseProgram(ProgramId);
+
+  ErrorCheckValue = glGetError();
+  if (ErrorCheckValue != GL_NO_ERROR)
+  {
+    fprintf(
+      stderr,
+      "ERROR: Could not create the shaders: %s \n",
+      gluErrorString(ErrorCheckValue)
+    );
+
+    exit(-1);
+  }
+}
+
+void DestroyShaders(void)
+{
+  GLenum ErrorCheckValue = glGetError();
+
+  glUseProgram(0);
+
+  glDetachShader(ProgramId, VertexShaderId);
+  glDetachShader(ProgramId, FragmentShaderId);
+
+  glDeleteShader(FragmentShaderId);
+  glDeleteShader(VertexShaderId);
+
+  glDeleteProgram(ProgramId);
+
+  ErrorCheckValue = glGetError();
+  if (ErrorCheckValue != GL_NO_ERROR)
+  {
+    fprintf(
+      stderr,
+      "ERROR: Could not destroy the shaders: %s \n",
+      gluErrorString(ErrorCheckValue)
+    );
+
+    exit(-1);
+  }
+}
+
+void processNormalKeys(unsigned char key, int x, int y) {
+
+  if (key == 27)
+    exit(0);
+}
+
+
+
+
+int main( int argc, char** argv ){
+
+	vector<time_t> timer(10);
+	timer[0] = time(0); 
+
+	//Params of SchoolFish
+	// int num_fish, k, iter;
+	// string par = argv[1]; str2num( par, num_fish); globalsize = num_fish;
+	// par = argv[2]; str2num( par, k); globalk = k;
+
+	// float t = 1;
+	// par = argv[3]; str2num( par, iter); globalt = t;
+
+	// float wa, wo;
+	// par = argv[4]; str2num( par, wa);
+	// par = argv[5]; str2num( par, wo);
+
+	// //Initialization of values
+	// // SchoolFish<p2D> myschool( num_fish );
+	// SchoolFish<p3D> myschool( num_fish );
+	// myschool.init(wa,wo);
+
+	// globalschool = myschool;
+	// // myschool.print();
+
+	globalsize = 10000;
+
+    ofstream result("movement_cuda.data");
+
+    timer[1] = time(0); 
+    cout <<"\nTiempo Inicializacio\'n: " << difftime(timer[1], timer[0]) << endl;
+
+    timer[2] = 0;
+    timer[3] = 0;
+    timer[4] = 0;
+
+    
+
+    Initialize(argc, argv);
+
+  glutMainLoop();
+  
+  exit(EXIT_SUCCESS);
+
+
+  // GLenum GlewInitResult;
+
+  // glutInit(&argc, argv);
+  
+  // glutInitContextVersion(4, 0);
+  // glutInitContextFlags(GLUT_FORWARD_COMPATIBLE);
+  // glutInitContextProfile(GLUT_CORE_PROFILE);
+
+  // glutSetOption(
+  //   GLUT_ACTION_ON_WINDOW_CLOSE,
+  //   GLUT_ACTION_GLUTMAINLOOP_RETURNS
+  // );
+  
+  // glutInitWindowSize(CurrentWidth, CurrentHeight);
+
+  // glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
+
+  // WindowHandle = glutCreateWindow(WINDOW_TITLE_PREFIX);
+
+  // if(WindowHandle < 1) {
+  //   fprintf(
+  //     stderr,
+  //     "ERROR: Could not create a new rendering window.\n"
+  //   );
+  //   exit(EXIT_FAILURE);
+  // }
+  // // glutReshapeFunc(ResizeFunction);
+
+	// for( int i = 0; i < iter; ++i){
 		// cout << i << endl;
 		// myschool.print_distances();
-		timer[0] = time(0); 
-		myschool.movement(t);
-		timer[1] = time(0); 
+		// timer[0] = time(0); 
+		// myschool.movement(t);
+		// timer[1] = time(0); 
 
-		// cout <<"\nTiempo Movimiento " << difftime(timer[1], timer[0]) << endl;
+		// // cout <<"\nTiempo Movimiento " << difftime(timer[1], timer[0]) << endl;
 
-		timer[2] += difftime(timer[1], timer[0]);
+		// timer[2] += difftime(timer[1], timer[0]);
 
-		timer[0] = time(0);
-		myschool.calc_neighboors(k);
-		timer[1] = time(0);
+		// timer[0] = time(0);
+		// myschool.calc_neighboors(k);
+		// timer[1] = time(0);
 
-		// cout <<"\nTiempo Calc Vecinos " << difftime(timer[1], timer[0]) << endl;
+		// // cout <<"\nTiempo Calc Vecinos " << difftime(timer[1], timer[0]) << endl;
 
-		timer[3] += difftime(timer[1], timer[0]);
+		// timer[3] += difftime(timer[1], timer[0]);
 
-		// myschool.print_neighboors();
-		timer[0] = time(0); 
-		myschool.update_c();
-		timer[1] = time(0);
+		// // myschool.print_neighboors();
+		// timer[0] = time(0); 
+		// myschool.update_c();
+		// timer[1] = time(0);
 
-		// cout <<"\nTiempo Act Pos " << difftime(timer[1], timer[0]) << endl;
+		// // cout <<"\nTiempo Act Pos " << difftime(timer[1], timer[0]) << endl;
 
-		timer[4] += difftime(timer[1], timer[0]);
+		// timer[4] += difftime(timer[1], timer[0]);
 
-		// myschool.print();
-		myschool.print2file( result, 2);
+		// // myschool.print();
+		// myschool.print2file( result, 2);
 
-		myschool.passtoptr();
+		// myschool.passtoptr();
 
 		
-		glutDisplayFunc(RenderFunction);
-		glutIdleFunc(IdleFunction);
+		// glutDisplayFunc(RenderFunction);
+		// glutIdleFunc(IdleFunction);
 
-		glutKeyboardFunc(processNormalKeys);
-		// glutSpecialFunc(processSpecialKeys);
+		// glutKeyboardFunc(processNormalKeys);
+		// // glutSpecialFunc(processSpecialKeys);
 	  
-		glutTimerFunc(0, TimerFunction, 0);
-	  	// glutCloseFunc(Cleanup);
+		// glutTimerFunc(0, TimerFunction, 0);
+	 //  	// glutCloseFunc(Cleanup);
 	  
-	  	glewExperimental = GL_TRUE;
-	  	GlewInitResult = glewInit();
+	 //  	glewExperimental = GL_TRUE;
+	 //  	GlewInitResult = glewInit();
 
-	  	if (GLEW_OK != GlewInitResult) {
-	    	fprintf(
-	    	  	stderr,
-		      	"ERROR: %s\n",
-		      	glewGetErrorString(GlewInitResult)
-	    		);
-	    	exit(EXIT_FAILURE);
-	  	}
+	 //  	if (GLEW_OK != GlewInitResult) {
+	 //    	fprintf(
+	 //    	  	stderr,
+		//       	"ERROR: %s\n",
+		//       	glewGetErrorString(GlewInitResult)
+	 //    		);
+	 //    	exit(EXIT_FAILURE);
+	 //  	}
 	  
-	  	fprintf(
-		    stdout,
-		    "INFO: OpenGL Version: %s\n",
-		    glGetString(GL_VERSION)
-	  	);
+	 //  	fprintf(
+		//     stdout,
+		//     "INFO: OpenGL Version: %s\n",
+		//     glGetString(GL_VERSION)
+	 //  	);
 
-		CreateShaders();
-		CreateVBO();
+		// CreateShaders();
+		// CreateVBO();
 
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		// glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
-		// glFinish();
+		// // glFinish();
 
 
-		glutMainLoop();	
+		// glutMainLoop();	
 
-		exit(EXIT_SUCCESS);
-	}
+		// exit(EXIT_SUCCESS);
+	// }
 
 
 

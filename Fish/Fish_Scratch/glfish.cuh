@@ -12,6 +12,7 @@ typedef struct
 } Vertex;
 
 Vertex data[100000];
+int globalsize;
 
 int
   CurrentWidth = 800,
@@ -147,7 +148,7 @@ void RenderFunction(void)
 
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   
-  glDrawArrays(GL_POINTS, 0, 100);
+  glDrawArrays(GL_POINTS, 0, globalsize);
 
   glutSwapBuffers();
 }
