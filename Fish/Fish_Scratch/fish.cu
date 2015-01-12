@@ -23,7 +23,10 @@ typedef struct
 } Vertex;
 
 Vertex data[100000];
-int globalsize;
+
+int num_fish, k, iter;
+float t = 1, wa, wo;
+
 
 int
   CurrentWidth = 800,
@@ -278,7 +281,7 @@ class SchoolFish{
 	}
 
 		void parallel_init(int start, int end){
-			int scale = 50, scale2=100;
+			int scale = 200, scale2=100;
 
 			default_random_engine rng(random_device{}()); 		
 			uniform_real_distribution<double> dist( lim1, lim2 );
@@ -294,7 +297,7 @@ class SchoolFish{
 
 				schoolfish[i].v.x = dist(rng)/scale;
 				schoolfish[i].v.y = dist(rng)/scale;
-				schoolfish[i].v.z = dist(rng)/scale+1;
+				schoolfish[i].v.z = dist(rng)/scale;
 
 				schoolfish[i].s = 0.02;
 				schoolfish[i].theta = PI/3;
@@ -535,7 +538,7 @@ class SchoolFish{
 
 		void check_limits( p3D& p, p3D& v ){
 
-			int lmin = -100, lmax = 100;
+			int lmin = -100/100, lmax = 100/100;
 
 			if( p.x + v.x < lmin || p.x + v.x > lmax ){
 				v.x= v.x* -1;
@@ -587,15 +590,19 @@ inline void str2num(string str, T& num){
 // 	cout << a[0] << endl;
 // }
 
-SchoolFish<p3D> globalschool( 10000 );
-float globalt = 1; int globalk = 5;
+
+
+SchoolFish<p3D> globalschool( 1 );
+//float globalt = 1; int globalk = 5;
 
 void Initialize(int argc, char* argv[])
 {
+  SchoolFish<p3D> fishschool( num_fish );
+  fishschool.init(wa,wo);
 
-  globalschool.init(7,1);
+  globalschool = fishschool;
 
-  globalschool.print();
+  // globalschool.print();
 
   GLenum GlewInitResult;
 
@@ -619,10 +626,7 @@ void Initialize(int argc, char* argv[])
     glGetString(GL_VERSION)
   );
 
-  CreateShaders();
-  CreateVBO();
 
-  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
 void InitWindow(int argc, char* argv[])
@@ -656,9 +660,12 @@ void InitWindow(int argc, char* argv[])
   glutDisplayFunc(RenderFunction);
   glutIdleFunc(IdleFunction);
 
+
   glutKeyboardFunc(processNormalKeys);
 
   glutTimerFunc(0, TimerFunction, 0);
+
+  // Cleanup();
   glutCloseFunc(Cleanup);
 }
 
@@ -674,23 +681,38 @@ void RenderFunction(void)
   ++FrameCount;
 
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-  globalschool.movement(globalt);
-	
-globalschool.calc_neighboors(globalk);
-	
-globalschool.update_c();
-
-globalschool.passtoptr();
   
-  glDrawArrays(GL_POINTS, 0, globalsize);
+  glDrawArrays(GL_POINTS, 0, num_fish);
 
   glutSwapBuffers();
 }
 
 void IdleFunction(void)
 {
+
+	  CreateShaders();
+	  CreateVBO();
+
+  	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
+	//cout << "--" << endl;
+	globalschool.movement(t);
+
+	//globalschool.print();
+		
+	globalschool.calc_neighboors(k);
+		
+	globalschool.update_c();
+
+	globalschool.passtoptr();
+
+
   glutPostRedisplay();
+
+  
+
+  //Cleanup();
+
 }
 
 void TimerFunction(int Value)
@@ -862,15 +884,15 @@ int main( int argc, char** argv ){
 
 	//Params of SchoolFish
 	// int num_fish, k, iter;
-	// string par = argv[1]; str2num( par, num_fish); globalsize = num_fish;
-	// par = argv[2]; str2num( par, k); globalk = k;
+	string par = argv[1]; str2num( par, num_fish); //globalsize = num_fish;
+	par = argv[2]; str2num( par, k); //globalk = k;
 
-	// float t = 1;
-	// par = argv[3]; str2num( par, iter); globalt = t;
+	// float t = 1;float wa, wo;
+	par = argv[3]; str2num( par, iter); //globalt = t;
 
 	// float wa, wo;
-	// par = argv[4]; str2num( par, wa);
-	// par = argv[5]; str2num( par, wo);
+	par = argv[4]; str2num( par, wa);
+	par = argv[5]; str2num( par, wo);
 
 	// //Initialization of values
 	// // SchoolFish<p2D> myschool( num_fish );
@@ -880,16 +902,16 @@ int main( int argc, char** argv ){
 	// globalschool = myschool;
 	// // myschool.print();
 
-	globalsize = 10000;
+	//globalsize = 10000;
 
-    ofstream result("movement_cuda.data");
+    //ofstream result("movement_cuda.data");
 
-    timer[1] = time(0); 
-    cout <<"\nTiempo Inicializacio\'n: " << difftime(timer[1], timer[0]) << endl;
+    // timer[1] = time(0); 
+    // cout <<"\nTiempo Inicializacio\'n: " << difftime(timer[1], timer[0]) << endl;
 
-    timer[2] = 0;
-    timer[3] = 0;
-    timer[4] = 0;
+    // timer[2] = 0;
+    // timer[3] = 0;
+    // timer[4] = 0;
 
     
 
@@ -1006,11 +1028,11 @@ int main( int argc, char** argv ){
 
 
 
-	cout <<"\nTiempo T Movimiento " << timer[2] << endl;
-	cout <<"\nTiempo T Calc Vecinos  " << timer[3] << endl;
-	cout <<"\nTiempo T Act Pos " << timer[4] << endl;
+	// cout <<"\nTiempo T Movimiento " << timer[2] << endl;
+	// cout <<"\nTiempo T Calc Vecinos  " << timer[3] << endl;
+	// cout <<"\nTiempo T Act Pos " << timer[4] << endl;
 
-	result.close();	
+	// result.close();	
 
 
 
