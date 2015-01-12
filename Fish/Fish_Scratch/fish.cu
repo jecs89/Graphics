@@ -22,7 +22,7 @@ typedef struct
   float RGBA[4];
 } Vertex;
 
-Vertex data[100000];
+Vertex data[20000];
 
 int num_fish, k, iter;
 float t = 1, wa, wo;
@@ -226,11 +226,15 @@ void test_calc_angle(){
     cout << setprecision(4) << ang << "\t" << ang*180/PI << endl;
 }
 
+double calc_norm( p3D x){
+	return sqrtf( powf(x.x,2) + powf( x.y,2) + powf( x.z,2) );
+}
+
 double calc_norm( p3D x, p3D y){
 	return sqrtf( powf(x.x-y.x,2) + powf( x.y-y.y,2) + powf( x.z-y.z,2) );
 }
 
-// params = { size, r_r, r_p}
+// params = { size, r_r, r_p, k}
 __global__ void calc_n(p3D* schoolfish, double* params, int* p_r, int* p_p){
 	int index = threadIdx.x + blockIdx.x*blockDim.x;
 
@@ -247,11 +251,11 @@ __global__ void calc_n(p3D* schoolfish, double* params, int* p_r, int* p_p){
 	int x = 0, y = 0, act_size = 0;
 
 	for( int i = 0; i < params[0] && act_size < params[3] ; ++i){
-		if( norm[i] <= params[1] ){
+		if( norm[i] <= params[2] ){
 			p_r[x+index] = i;
 			x++; act_size++;
 		}
-		else if( norm[i] > params[1] && norm[i] <= params[2] && act_size < params[3]){
+		else if( norm[i] > params[2] && norm[i] <= params[1] && act_size < params[3]){
 			p_p[y+index] = i;
 			y++; act_size++;
 		}
@@ -281,7 +285,7 @@ class SchoolFish{
 	}
 
 		void parallel_init(int start, int end){
-			int scale = 200, scale2=100;
+			int scale = 200, scale2=200;
 
 			default_random_engine rng(random_device{}()); 		
 			uniform_real_distribution<double> dist( lim1, lim2 );
@@ -293,16 +297,16 @@ class SchoolFish{
 
 				schoolfish[i].c.x = dist(rng)/scale2;
 				schoolfish[i].c.y = dist(rng)/scale2;
-				schoolfish[i].c.z = dist(rng)/scale2;
+				schoolfish[i].c.z = 0;
 
 				schoolfish[i].v.x = dist(rng)/scale;
 				schoolfish[i].v.y = dist(rng)/scale;
 				schoolfish[i].v.z = dist(rng)/scale;
 
-				schoolfish[i].s = 0.02;
-				schoolfish[i].theta = PI/3;
-				schoolfish[i].r_r = 50/scale2;
-				schoolfish[i].r_p = 60/scale2;
+				schoolfish[i].s = 0.05;
+				schoolfish[i].theta = PI/2;
+				schoolfish[i].r_r = 150/double(scale2);
+				schoolfish[i].r_p = 50/double(scale2);
 				// schoolfish[i].w_a = wa;
 				// schoolfish[i].w_o = wo;
 
@@ -393,7 +397,7 @@ class SchoolFish{
 
 			// cout << "Start Calc N\n";
 	
-			int N = schoolfish.size(), M = 1024;
+			int N = schoolfish.size(), M = 2048;
 			// cout << "Fish" << pos << endl;
 			
 			int size_school = v_p3D.size() * sizeof( p3D );
@@ -516,9 +520,12 @@ class SchoolFish{
 				}
 
 				if( calc_angle( schoolfish[i].c, d ) <= schoolfish[i].theta ){
-					 schoolfish[i].c.x = schoolfish[i].c.x + schoolfish[i].s * d.x;
-					 schoolfish[i].c.y = schoolfish[i].c.y + schoolfish[i].s * d.x;
-					 schoolfish[i].c.z = schoolfish[i].c.z + schoolfish[i].s * d.x;
+
+					 double vecnorm = calc_norm( schoolfish[i].v );
+
+					 schoolfish[i].c.x = schoolfish[i].c.x + schoolfish[i].s * ( schoolfish[i].v.x / vecnorm );
+					 schoolfish[i].c.y = schoolfish[i].c.y + schoolfish[i].s * ( schoolfish[i].v.y / vecnorm );
+					 schoolfish[i].c.z = schoolfish[i].c.z + schoolfish[i].s * ( schoolfish[i].v.z / vecnorm );
 				}
 			}
 		}
@@ -539,7 +546,6 @@ class SchoolFish{
 		void check_limits( p3D& p, p3D& v ){
 
 			int lmin = -100/100, lmax = 100/100;
-
 			if( p.x + v.x < lmin || p.x + v.x > lmax ){
 				v.x= v.x* -1;
 			}
