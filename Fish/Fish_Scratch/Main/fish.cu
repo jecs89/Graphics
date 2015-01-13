@@ -15,13 +15,16 @@
 #include <GL/freeglut.h>
 #define WINDOW_TITLE_PREFIX "Chapter 2"
 
+#include <unistd.h>   //_getch*/
+#include <termios.h>  //_getch*/
+
 typedef struct
 {
   float XYZW[4];
   float RGBA[4];
 } Vertex;
 
-Vertex data[10000];
+Vertex data[5000];
 
 int num_fish, k, iter;
 float t = 1, wa, wo;
@@ -299,14 +302,14 @@ class SchoolFish{
 				schoolfish[i].c.y = dist(rng)/5;
 				schoolfish[i].c.z = 0;
 
-				schoolfish[i].v.x = 0.05;
-				schoolfish[i].v.y = 0.05;
+				schoolfish[i].v.x = dist2(rng2)/10;
+				schoolfish[i].v.y = dist2(rng2)/10;
 				schoolfish[i].v.z = 0;
 
-				schoolfish[i].s = 0.09;
-				schoolfish[i].theta = PI/2;
-				schoolfish[i].r_r = 0.9;
-				schoolfish[i].r_p = 0.9;
+				schoolfish[i].s = 0.05;
+				schoolfish[i].theta = PI/4;
+				schoolfish[i].r_r = 0.005;
+				schoolfish[i].r_p = 0.8;
 				// schoolfish[i].w_a = wa;
 				// schoolfish[i].w_o = wo;
 
@@ -329,25 +332,25 @@ class SchoolFish{
 		    //dimensions of blocks
 		    double incx = double(schoolfish.size()) / nThreads;
 
-		    int start, end;
+		    // int start, end;
 		    //Launching threads
-		    for ( int i = 0; i < nThreads/2; ++i){
+		    for ( int i = 0; i < nThreads; ++i){
 		    	start = floor(i * incx), end = floor((i+1) * incx );
 		    	// cout << start << "\t" << end << endl;
 		    	//bind(&SchoolFish<T>::parallel_init, this, start, end) );
 		        ths[i] = thread( &SchoolFish<T>::parallel_init, this, start, end );
 		    }
 
-		    lim2 = -1, lim1 = 0;
+		    /*lim2 = -100, lim1 = -50;
 
-		    for ( int i = nThreads/2; i < nThreads; ++i){
+		    for ( int i = nThreads/3; i < nThreads*2/3; ++i){
 		    	start = floor(i * incx), end = floor((i+1) * incx );
 		    	// cout << start << "\t" << end << endl;
 		    	//bind(&SchoolFish<T>::parallel_init, this, start, end) );
 		        ths[i] = thread( &SchoolFish<T>::parallel_init, this, start, end );
 		    }
 
-		    /*lim2 = 30, lim1 = 50;
+		    lim2 = 30, lim1 = 50;
 
 		    for ( int i = nThreads*2/3; i < nThreads; ++i){
 		    	start = floor(i * incx), end = floor((i+1) * incx );
@@ -357,17 +360,14 @@ class SchoolFish{
 		    }
 		    */
 		    //Joining threads
-		    for ( int i = 0; i < nThreads/2; i++ )
-		        ths[i].join();
-
-		    for ( int i = nThreads/2; i < nThreads; i++ )
+		    for ( int i = 0; i < nThreads; i++ )
 		        ths[i].join();
 
 		    //Predators
 
 		    int n_p = 50;
 		    for( int p = 0; p < n_p; ++p){
-		    	schoolfish[p].c.x = 0.01*p;
+		    	schoolfish[p].c.x = 0.5;
 			    schoolfish[p].c.y = 0.5;
 			    schoolfish[p].c.z = 0.5;
 			    schoolfish[p].r_r = 1.0;
@@ -535,13 +535,13 @@ class SchoolFish{
 
 						schoolfish[i].c.x = schoolfish[i].c.x + schoolfish[i].s * vn2.x; //ojo
 					 	schoolfish[i].c.y = schoolfish[i].c.y + schoolfish[i].s * vn2.y;
-					 	//schoolfish[i].c.z = schoolfish[i].c.z + schoolfish[i].s * vn2.z;
+					 	schoolfish[i].c.z = schoolfish[i].c.z + schoolfish[i].s * vn2.z;
 
 					}
 
 					schoolfish[i].v.x = vn2.x;
 					schoolfish[i].v.y = vn2.y;
-					//schoolfish[i].v.z = vn2.z;
+					schoolfish[i].v.z = vn2.z;
 
 
 				}
@@ -584,13 +584,13 @@ class SchoolFish{
 
 						schoolfish[i].c.x = schoolfish[i].c.x + schoolfish[i].s * vn2.x;
 					 	schoolfish[i].c.y = schoolfish[i].c.y + schoolfish[i].s * vn2.y;
-					 	//schoolfish[i].c.z = schoolfish[i].c.z + schoolfish[i].s * vn2.z;
+					 	schoolfish[i].c.z = schoolfish[i].c.z + schoolfish[i].s * vn2.z;
 
 					}
 
 					schoolfish[i].v.x = vn2.x;
 					schoolfish[i].v.y = vn2.y;
-					//schoolfish[i].v.z = vn2.z;
+					schoolfish[i].v.z = vn2.z;
 
 				}		
 			}
@@ -604,7 +604,7 @@ class SchoolFish{
 
 				schoolfish[i].c.x += schoolfish[i].v.x * schoolfish[i].s * t;
 				schoolfish[i].c.y += schoolfish[i].v.y * schoolfish[i].s * t;
-				//schoolfish[i].c.z += schoolfish[i].v.z * schoolfish[i].s * t;
+				schoolfish[i].c.z += schoolfish[i].v.z * schoolfish[i].s * t;
 			}
 			// cout << "Good Movement" << endl;
 		}
@@ -628,7 +628,7 @@ class SchoolFish{
 			for( int i = 0; i < schoolfish.size(); ++i){
 				data[i].XYZW[0] = (GLfloat)schoolfish[i].c.x;
 				data[i].XYZW[1] = (GLfloat)schoolfish[i].c.y;
-				data[i].XYZW[2] = 0;
+				data[i].XYZW[2] = (GLfloat)schoolfish[i].c.z;
 				data[i].XYZW[3] = (GLfloat)1.0f;
 
 				data[i].RGBA[0] = (GLfloat)1.0f;
@@ -751,8 +751,36 @@ void RenderFunction(void)
   glutSwapBuffers();
 }
 
+char getch(){
+    /*#include <unistd.h>   //_getch*/
+    /*#include <termios.h>  //_getch*/
+    char buf=0;
+    struct termios old={0};
+    fflush(stdout);
+    if(tcgetattr(0, &old)<0)
+        perror("tcsetattr()");
+    old.c_lflag&=~ICANON;
+    old.c_lflag&=~ECHO;
+    old.c_cc[VMIN]=1;
+    old.c_cc[VTIME]=0;
+    if(tcsetattr(0, TCSANOW, &old)<0)
+        perror("tcsetattr ICANON");
+    if(read(0,&buf,1)<0)
+        perror("read()");
+    old.c_lflag|=ICANON;
+    old.c_lflag|=ECHO;
+    if(tcsetattr(0, TCSADRAIN, &old)<0)
+        perror ("tcsetattr ~ICANON");
+    printf("%c\n",buf);
+    return buf;
+ }
+
 void IdleFunction(void)
 {
+	// int c = getchar();
+	// putchar(c);
+
+	getch();
 
   	CreateShaders();
 	CreateVBO();
