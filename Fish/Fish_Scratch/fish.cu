@@ -255,7 +255,7 @@ __global__ void calc_n(p3D* schoolfish, double* params, int* p_r, int* p_p){
 			p_r[x+index] = i;
 			x++; act_size++;
 		}
-		else if( norm[i] > params[2] && norm[i] <= params[1] && act_size < params[3]){
+		else if( norm[i] > params[2] && norm[i] <= params[1] ){
 			p_p[y+index] = i;
 			y++; act_size++;
 		}
@@ -268,14 +268,14 @@ template <typename T>
 class SchoolFish{
 
 	public:
-	vector< fish< T > > schoolfish;
+	vector< fish< T > > schoolfish;	
 	int lim1, lim2;
 	double wa, wo;
 
 	int start, end;
 	// int start, int end
 
-	vector<p3D> v_p3D;
+	vector<p3D> v_p3D; 
 
 	public:
 		SchoolFish(int size){
@@ -290,6 +290,9 @@ class SchoolFish{
 			default_random_engine rng(random_device{}()); 		
 			uniform_real_distribution<double> dist( lim1, lim2 );
 
+			default_random_engine rng2(random_device{}()); 		
+			uniform_real_distribution<double> dist2( lim1/10, lim2/10 );
+
 			// cout << "Thread: " << start << "\t" << end << endl;
 
 			for( int i = start; i < end; ++i){
@@ -299,9 +302,9 @@ class SchoolFish{
 				schoolfish[i].c.y = dist(rng)/scale2;
 				schoolfish[i].c.z = 0;
 
-				schoolfish[i].v.x = dist(rng)/scale;
-				schoolfish[i].v.y = dist(rng)/scale;
-				schoolfish[i].v.z = dist(rng)/scale;
+				schoolfish[i].v.x = dist2(rng2)/10;
+				schoolfish[i].v.y = dist2(rng2)/10;
+				schoolfish[i].v.z = dist2(rng2)/10;
 
 				schoolfish[i].s = 0.05;
 				schoolfish[i].theta = PI/2;
