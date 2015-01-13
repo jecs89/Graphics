@@ -16,13 +16,28 @@
 #include <GL/freeglut.h>
 #define WINDOW_TITLE_PREFIX "Chapter 2"
 
+
+GLfloat posObjeto = -5.0f;
+int lookAt=0;
+GLfloat anguloCamaraY = 0.0f;
+GLfloat anguloCamaraX = 0.0f;
+GLfloat anguloCamaraZ= 0.0f;
+GLfloat anguloCamara2Z = 0.0f;
+int perspectiva=0;
+GLfloat anguloEsfera = 0.0f;
+int hazPerspectiva = 0;
+int esferaSolida = 0;
+
+
+
+
 typedef struct
 {
   float XYZW[4];
   float RGBA[4];
 } Vertex;
 
-Vertex data[20000];
+Vertex data[50000];
 
 int num_fish, k, iter;
 float t = 1, wa, wo;
@@ -41,6 +56,8 @@ GLuint
   ProgramId,
   VaoId,
   VboId;
+
+  GLuint ibo_cube_elements;
 
 const GLchar* VertexShader =
 {
@@ -300,15 +317,15 @@ class SchoolFish{
 
 				schoolfish[i].c.x = dist(rng)/scale2;
 				schoolfish[i].c.y = dist(rng)/scale2;
-				schoolfish[i].c.z = 0;
+				schoolfish[i].c.z = dist(rng)/scale2;
 
 				schoolfish[i].v.x = dist2(rng2)/10;
 				schoolfish[i].v.y = dist2(rng2)/10;
 				schoolfish[i].v.z = dist2(rng2)/10;
 
-				schoolfish[i].s = 0.05;
-				schoolfish[i].theta = PI/2;
-				schoolfish[i].r_r = 50/double(scale2);
+				schoolfish[i].s = 0.005;
+				schoolfish[i].theta = PI;
+				schoolfish[i].r_r = 30/double(scale2);
 				schoolfish[i].r_p = 150/double(scale2);
 				// schoolfish[i].w_a = wa;
 				// schoolfish[i].w_o = wo;
@@ -334,14 +351,14 @@ class SchoolFish{
 
 		    // int start, end;
 		    //Launching threads
-		    for ( int i = 0; i < nThreads/3; ++i){
+		    for ( int i = 0; i < nThreads; ++i){
 		    	start = floor(i * incx), end = floor((i+1) * incx );
 		    	// cout << start << "\t" << end << endl;
 		    	//bind(&SchoolFish<T>::parallel_init, this, start, end) );
 		        ths[i] = thread( &SchoolFish<T>::parallel_init, this, start, end );
 		    }
 
-		    lim2 = -100, lim1 = -50;
+		    /*lim2 = -100, lim1 = -50;
 
 		    for ( int i = nThreads/3; i < nThreads*2/3; ++i){
 		    	start = floor(i * incx), end = floor((i+1) * incx );
@@ -358,12 +375,23 @@ class SchoolFish{
 		    	//bind(&SchoolFish<T>::parallel_init, this, start, end) );
 		        ths[i] = thread( &SchoolFish<T>::parallel_init, this, start, end );
 		    }
-		    
+		    */
 		    //Joining threads
 		    for ( int i = 0; i < nThreads; i++ )
 		        ths[i].join();
 
-		    
+		    //Predators
+
+		    int n_p = 50;
+		    for( int p = 0; p < n_p; ++p){
+		    	schoolfish[p].c.x = 0.5;
+			    schoolfish[p].c.y = 0.5;
+			    schoolfish[p].c.z = 0.5;
+			    schoolfish[p].r_r = 1.0;
+			    schoolfish[p].r_p = 1.0;
+			    schoolfish[p].theta = 2*PI;
+		    }
+   	    
 		}
 
 		void print(){
@@ -493,9 +521,11 @@ class SchoolFish{
 		}
 
 		void update_c(){
+
 			for( int i = 0; i < schoolfish.size(); ++i){
 				// pair<double,double> d(0,0);
-				p3D d; d.x = d.y = d.z = 0;
+				p3D d1; d1.x = d1.y = d1.z = 0;
+				p3D d2; d2.x = d2.y = d2.z = 0;
 
 				if( schoolfish[i].neighborhood_r.size() > 0 ){
 					for( int j = 0; j < schoolfish[i].neighborhood_r.size(); ++j){
@@ -504,36 +534,82 @@ class SchoolFish{
 						
 						double den = calc_norm( schoolfish[ii].c, schoolfish[jj].c );
 				
-						d.x +=  ( schoolfish[jj].c.x - schoolfish[ii].c.x ) / ( den );
-						d.y +=  ( schoolfish[jj].c.y - schoolfish[ii].c.y ) / ( den );	
-						d.z += ( schoolfish[jj].c.z - schoolfish[ii].c.z ) / ( den );	
+						d1.x +=  ( schoolfish[jj].c.x - schoolfish[ii].c.x ) / ( den );
+						d1.y +=  ( schoolfish[jj].c.y - schoolfish[ii].c.y ) / ( den );	
+						d1.z += ( schoolfish[jj].c.z - schoolfish[ii].c.z ) / ( den );	
 				
 					}
-					d.x = -1 * d.x; d.y = -1 * d.y; d.z = -1 * d.z;
+			
+					d1.x = -1 * d1.x; d1.y = -1 * d1.y; d1.z = -1 * d1.z;
+
+					double vecnorm1 = calc_norm( schoolfish[i].v );
+					double vecnorm2 = calc_norm( d1 );
+
+					p3D vn1; vn1.x = schoolfish[i].v.x / vecnorm1; vn1.y = schoolfish[i].v.y / vecnorm1; vn1.z = schoolfish[i].v.z / vecnorm1;
+					p3D vn2; vn2.x = d1.x / vecnorm2; vn2.y = d1.y / vecnorm2; vn2.z = d1.z / vecnorm2;
+
+					if( calc_angle( vn1, vn2 ) <= schoolfish[i].theta ){
+
+						schoolfish[i].c.x = schoolfish[i].c.x + schoolfish[i].s * vn2.x; //ojo
+					 	schoolfish[i].c.y = schoolfish[i].c.y + schoolfish[i].s * vn2.y;
+					 	schoolfish[i].c.z = schoolfish[i].c.z + schoolfish[i].s * vn2.z;
+
+					}
+
+					schoolfish[i].v.x = vn2.x;
+					schoolfish[i].v.y = vn2.y;
+					schoolfish[i].v.z = vn2.z;
+
+
 				}
-				else{
+
+				else if( schoolfish[i].neighborhood_p.size() > 0){
 					for( int j = 0; j < schoolfish[i].neighborhood_p.size(); ++j){
 						int ii = schoolfish[i].num, jj = schoolfish[i].neighborhood_p[j];
 						double den = calc_norm( schoolfish[ii].c, schoolfish[jj].c );
 
-						int norm_v = (schoolfish[i].v.x/ sqrtf( powf(schoolfish[i].v.x,2) + powf(schoolfish[i].v.y,2) + powf(schoolfish[i].v.z,2) ) );
+						//int norm_v = ( schoolfish[i].v.x/ sqrtf( powf(schoolfish[i].v.x,2) + powf(schoolfish[i].v.y,2) + powf(schoolfish[i].v.z,2) ) );
 
-						d.x +=  wa * ( schoolfish[jj].c.x - schoolfish[ii].c.x ) / ( den ) + wo * norm_v;
-						d.y +=  wa * ( schoolfish[jj].c.y - schoolfish[ii].c.y ) / ( den ) + wo * norm_v;	
-						d.z +=  wa * ( schoolfish[jj].c.z - schoolfish[ii].c.z ) / ( den ) + wo * norm_v;	
+						d2.x +=  wa * ( schoolfish[jj].c.x - schoolfish[ii].c.x ) / ( den ); //+ wo * norm_v;
+						d2.y +=  wa * ( schoolfish[jj].c.y - schoolfish[ii].c.y ) / ( den ); //+ wo * norm_v;	
+						d2.z +=  wa * ( schoolfish[jj].c.z - schoolfish[ii].c.z ) / ( den ); //+ wo * norm_v;	
 					}
-					d.x = -1 * d.x; d.y = -1 * d.y; d.z = -1 * d.z;
+					// d.x = -1 * d.x; d.y = -1 * d.y; d.z = -1 * d.z;
 
-				}
+					p3D v1; v1.x = v1.y = v1.z = 0;					
 
-				if( calc_angle( schoolfish[i].c, d ) <= schoolfish[i].theta ){
+					for( int j = 0; j < schoolfish[i].neighborhood_p.size(); ++j){
+						int jj = schoolfish[i].neighborhood_p[j];
+						double norm_v = calc_norm( schoolfish[jj].v );
 
-					 double vecnorm = calc_norm( schoolfish[i].v );
+						v1.x += (schoolfish[jj].v.x / norm_v);
+						v1.y += (schoolfish[jj].v.y / norm_v);
+						v1.z += (schoolfish[jj].v.z / norm_v);
+					}
 
-					 schoolfish[i].c.x = schoolfish[i].c.x + schoolfish[i].s * ( schoolfish[i].v.x / vecnorm );
-					 schoolfish[i].c.y = schoolfish[i].c.y + schoolfish[i].s * ( schoolfish[i].v.y / vecnorm );
-					 schoolfish[i].c.z = schoolfish[i].c.z + schoolfish[i].s * ( schoolfish[i].v.z / vecnorm );
-				}
+					v1.x = wo * v1.x; v1.y = wo * v1.y; v1.z = wo * v1.z;
+
+					d2.x = d2.x + v1.x; d2.y = d2.y + v1.y; d2.z = d2.z + v1.z;
+
+					double vecnorm1 = calc_norm( schoolfish[i].v );
+					double vecnorm2 = calc_norm( d2 );
+
+					p3D vn1; vn1.x = schoolfish[i].v.x / vecnorm1; vn1.y = schoolfish[i].v.y / vecnorm1; vn1.z = schoolfish[i].v.z / vecnorm1;
+					p3D vn2; vn2.x = d2.x / vecnorm2; vn2.y = d2.y / vecnorm2; vn2.z = d2.z / vecnorm2;
+
+					if( calc_angle( vn1, vn2 ) <= schoolfish[i].theta ){
+
+						schoolfish[i].c.x = schoolfish[i].c.x + schoolfish[i].s * vn2.x;
+					 	schoolfish[i].c.y = schoolfish[i].c.y + schoolfish[i].s * vn2.y;
+					 	schoolfish[i].c.z = schoolfish[i].c.z + schoolfish[i].s * vn2.z;
+
+					}
+
+					schoolfish[i].v.x = vn2.x;
+					schoolfish[i].v.y = vn2.y;
+					schoolfish[i].v.z = vn2.z;
+
+				}		
 			}
 		}
 
@@ -573,10 +649,20 @@ class SchoolFish{
 				data[i].XYZW[3] = (GLfloat)1.0f;
 
 				data[i].RGBA[0] = (GLfloat)1.0f;
-				data[i].RGBA[1] = (GLfloat)1.0f;
+				data[i].RGBA[1] = (GLfloat)0.0f;
 				data[i].RGBA[2] = (GLfloat)0.0f;
 				data[i].RGBA[3] = (GLfloat)1.0f;
 			}
+
+
+		    int n_p = 50;
+
+		    for( int p = 0; p < n_p; ++p){
+		    	data[p].RGBA[0] = (GLfloat)0.0f;
+				data[p].RGBA[1] = (GLfloat)1.0f;
+				data[p].RGBA[2] = (GLfloat)0.0f;
+				data[p].RGBA[3] = (GLfloat)1.0f;
+		    }
 		}
 };
 
@@ -687,6 +773,18 @@ void ResizeFunction(int Width, int Height)
   CurrentWidth = Width;
   CurrentHeight = Height;
   glViewport(0, 0, CurrentWidth, CurrentHeight);
+
+  glMatrixMode(GL_PROJECTION);
+  //glOrtho(-1.0, 1.0, -1.0, 1.0, 1, 1);
+  glLoadIdentity();
+
+   if (perspectiva){
+        gluPerspective(60.0f, (GLfloat)CurrentWidth/(GLfloat)CurrentHeight, 1.0f, 40.0f);
+    }else{
+        glOrtho(-10,10,-10,10,1,40);
+    }
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
 }
 
 void RenderFunction(void)
@@ -694,8 +792,29 @@ void RenderFunction(void)
   ++FrameCount;
 
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  
+
+    glLoadIdentity();
+    ////////////////////////////////////////////
+    // movimiento y posicionamiento de la camara.
+    ////////////////////////////////////////////
+    if (!lookAt){
+        glTranslatef(0.0f, 0.0f, posObjeto); // zoom
+
+        // eje horizontal.
+        glRotatef(anguloCamaraY, 0.0f, 1.0f, 0.0f);
+        // eje vertical.
+        glRotatef(anguloCamaraX,1.0f,0.0f,0.0f);
+    } else {
+        gluLookAt(-5,10,5,0,0,0,1,12,4);
+    }
+
+  glScalef(20, 20, 20);
+
+
   glDrawArrays(GL_POINTS, 0, num_fish);
+
+
+  //glDrawElements(GL_TRIANGLES, size/sizeof(GLushort), GL_UNSIGNED_SHORT, 0);
 
   glutSwapBuffers();
 }
@@ -706,16 +825,16 @@ void IdleFunction(void)
 	  CreateShaders();
 	  CreateVBO();
 
-  	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glClearColor(0,0,0,0);
+  	//glClearColor(0.071f, 0.741f, 0.843f, 0.0f);
 
 	//cout << "--" << endl;
 	
-
 	//globalschool.print();
 		
-	globalschool.calc_neighboors(k);
-
 	globalschool.movement(t);
+
+	globalschool.calc_neighboors(k);
 		
 	globalschool.update_c();
 
@@ -723,8 +842,6 @@ void IdleFunction(void)
 
 
   glutPostRedisplay();
-
-  
 
   //Cleanup();
 
@@ -740,7 +857,7 @@ void TimerFunction(int Value)
       TempString,
       "%s: %d Frames Per Second @ %d x %d",
       WINDOW_TITLE_PREFIX,
-      FrameCount * 4,
+      FrameCount * 8,
       CurrentWidth,
       CurrentHeight
     );
@@ -750,7 +867,7 @@ void TimerFunction(int Value)
   }
   
   FrameCount = 0;
-  glutTimerFunc(250, TimerFunction, 1);
+  glutTimerFunc(125, TimerFunction, 1);
 }
 
 void Cleanup(void)
@@ -797,6 +914,35 @@ void CreateVBO(void)
 
     exit(-1);
   }
+
+ 	// GLushort cube_elements[] = {
+  //   // front
+  //   0, 1, 2,
+  //   2, 3, 0,
+  //   // top
+  //   3, 2, 6,
+  //   6, 7, 3,
+  //   // back
+  //   7, 6, 5,
+  //   5, 4, 7,
+  //   // bottom
+  //   4, 5, 1,
+  //   1, 0, 4,
+  //   // left
+  //   4, 0, 3,
+  //   3, 7, 4,
+  //   // right
+  //   1, 5, 6,
+  //   6, 2, 1,
+  // };
+  // glGenBuffers(1, &ibo_cube_elements);
+  // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
+  // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_elements), cube_elements, GL_STATIC_DRAW);
+  // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+  // int size;  glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
+
+
 }
 
 void DestroyVBO(void)
@@ -885,9 +1031,70 @@ void DestroyShaders(void)
 
 void processNormalKeys(unsigned char key, int x, int y) {
 
-  if (key == 27)
-    exit(0);
+    switch(key) {
+	// SELECCIONAR LA perspectiva
+	    case 'p':
+	    case 'P':
+	        perspectiva=1;																																											
+	        ResizeFunction(CurrentHeight,CurrentWidth);
+	        RenderFunction();
+	        break;
+
+	    case 'o':
+	    case 'O':
+	        perspectiva=0;
+	        ResizeFunction(CurrentHeight,CurrentWidth);
+	        RenderFunction();
+	        break;
+
+	// ROTAR CAMARA LA DERECHA
+	    case '1':
+	        anguloCamaraY++;
+	        printf("Angulo de rotacion de la camara en torno al eje Y: %i \n",((int)anguloCamaraY % 360));
+	        RenderFunction();
+	        break;
+	// ROTAR CAMARA LA IZQUIERDA																																										
+	    case '2':
+	        anguloCamaraY--;
+	        printf("Angulo de rotacion de la camara en torno al eje Y: %i \n",((int)anguloCamaraY % 360));
+	        RenderFunction();
+	        break;
+	// ROTAR CAMARA HACIA ARRIBA
+	    case '3':
+	        anguloCamaraX++;
+	        printf("Angulo de rotacion de la camara en torno al eje X: %i \n",((int)anguloCamaraX % 360));
+	        RenderFunction();
+	        break;
+	// ROTAR CAMARA HACIA ABAJO
+	    case '4':
+	        anguloCamaraX--;
+	        printf("Angulo de rotacion de la camara en torno al eje X: %i \n",((int)anguloCamaraX % 360));
+	        RenderFunction();
+	        break;
+	    case '5':
+	        posObjeto++;																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																							
+	        RenderFunction();
+	        break;
+	    case '6':
+	        posObjeto--;
+	        RenderFunction();
+	        break;
+	    case '7':
+	        if (lookAt==0){
+	            lookAt=1;
+	        }else{
+	            lookAt=0;
+	        }
+	        RenderFunction();
+	        break;
+	    case 27: // escape
+	        exit(0);
+	        break;
+	    
+		}
+
 }
+
 
 
 
