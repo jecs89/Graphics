@@ -251,11 +251,11 @@ __global__ void calc_n(p3D* schoolfish, double* params, int* p_r, int* p_p){
 	int x = 0, y = 0, act_size = 0;
 
 	for( int i = 0; i < params[0] && act_size < params[3] ; ++i){
-		if( norm[i] <= params[2] ){
+		if( norm[i] <= params[1] ){
 			p_r[x+index] = i;
 			x++; act_size++;
 		}
-		else if( norm[i] > params[2] && norm[i] <= params[1] ){
+		else if( norm[i] > params[1] && norm[i] <= params[2] ){
 			p_p[y+index] = i;
 			y++; act_size++;
 		}
@@ -296,7 +296,7 @@ class SchoolFish{
 			// cout << "Thread: " << start << "\t" << end << endl;
 
 			for( int i = start; i < end; ++i){
-				schoolfish[i].num = i;
+				schoolfish[i].num = i;  //name
 
 				schoolfish[i].c.x = dist(rng)/scale2;
 				schoolfish[i].c.y = dist(rng)/scale2;
@@ -308,8 +308,8 @@ class SchoolFish{
 
 				schoolfish[i].s = 0.05;
 				schoolfish[i].theta = PI/2;
-				schoolfish[i].r_r = 150/double(scale2);
-				schoolfish[i].r_p = 50/double(scale2);
+				schoolfish[i].r_r = 50/double(scale2);
+				schoolfish[i].r_p = 150/double(scale2);
 				// schoolfish[i].w_a = wa;
 				// schoolfish[i].w_o = wo;
 
@@ -499,17 +499,21 @@ class SchoolFish{
 
 				if( schoolfish[i].neighborhood_r.size() > 0 ){
 					for( int j = 0; j < schoolfish[i].neighborhood_r.size(); ++j){
+						
 						int ii = schoolfish[i].num, jj = schoolfish[i].neighborhood_r[j];
+						
 						double den = calc_norm( schoolfish[ii].c, schoolfish[jj].c );
+				
 						d.x +=  ( schoolfish[jj].c.x - schoolfish[ii].c.x ) / ( den );
 						d.y +=  ( schoolfish[jj].c.y - schoolfish[ii].c.y ) / ( den );	
 						d.z += ( schoolfish[jj].c.z - schoolfish[ii].c.z ) / ( den );	
+				
 					}
 					d.x = -1 * d.x; d.y = -1 * d.y; d.z = -1 * d.z;
 				}
 				else{
-					for( int j = 0; j < schoolfish[i].neighborhood_r.size(); ++j){
-						int ii = schoolfish[i].num, jj = schoolfish[i].neighborhood_r[j];
+					for( int j = 0; j < schoolfish[i].neighborhood_p.size(); ++j){
+						int ii = schoolfish[i].num, jj = schoolfish[i].neighborhood_p[j];
 						double den = calc_norm( schoolfish[ii].c, schoolfish[jj].c );
 
 						int norm_v = (schoolfish[i].v.x/ sqrtf( powf(schoolfish[i].v.x,2) + powf(schoolfish[i].v.y,2) + powf(schoolfish[i].v.z,2) ) );
@@ -705,11 +709,13 @@ void IdleFunction(void)
   	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
 	//cout << "--" << endl;
-	globalschool.movement(t);
+	
 
 	//globalschool.print();
 		
 	globalschool.calc_neighboors(k);
+
+	globalschool.movement(t);
 		
 	globalschool.update_c();
 
