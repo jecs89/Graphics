@@ -8,28 +8,12 @@
 #include <fstream>
 #include <thread>
 
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 #define WINDOW_TITLE_PREFIX "Chapter 2"
-
-
-GLfloat posObjeto = -5.0f;
-int lookAt=0;
-GLfloat anguloCamaraY = 0.0f;
-GLfloat anguloCamaraX = 0.0f;
-GLfloat anguloCamaraZ= 0.0f;
-GLfloat anguloCamara2Z = 0.0f;
-int perspectiva=0;
-GLfloat anguloEsfera = 0.0f;
-int hazPerspectiva = 0;
-int esferaSolida = 0;
-
-
-
 
 typedef struct
 {
@@ -41,7 +25,6 @@ Vertex data[5000];
 
 int num_fish, k, iter;
 float t = 1, wa, wo;
-
 
 int
   CurrentWidth = 800,
@@ -668,26 +651,6 @@ inline void str2num(string str, T& num){
 	if ( ! (istringstream(str) >> num) ) num = 0;
 }
 
-// void test_vector2ptr(){
-// 	int* a;
-// 	vector<int> b;
-// 	b.push_back(-10);
-// 	vector2ptr(b,a,b.size()); 
-
-// 	cout << a[0] << endl;
-// }
-
-// void test_ptr2vector(){
-// 	int* ptr = ( int* )malloc( 1 * sizeof(int) );
-// 	vector<int> a;
-// 	ptr[0] = 100;
-
-// 	ptr2vector(ptr,a,1);
-// 	cout << a[0] << endl;
-// }
-
-
-
 SchoolFish<p3D> globalschool( 1 );
 //float globalt = 1; int globalk = 5;
 
@@ -771,16 +734,7 @@ void ResizeFunction(int Width, int Height)
   CurrentHeight = Height;
   glViewport(0, 0, CurrentWidth, CurrentHeight);
 
-  glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-
-   if (perspectiva){
-        gluPerspective(60.0f, (GLfloat)CurrentWidth/(GLfloat)CurrentHeight, 1.0f, 40.0f);
-    }else{
-        glOrtho(-10,10,-10,10,1,40);
-    }
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
 }
 
 void RenderFunction(void)
@@ -788,24 +742,6 @@ void RenderFunction(void)
   ++FrameCount;
 
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glLoadIdentity();
-    ////////////////////////////////////////////
-    // movimiento y posicionamiento de la camara.
-    ////////////////////////////////////////////
-    if (!lookAt){
-        glTranslatef(0.0f, 0.0f, posObjeto); // zoom
-
-        // eje horizontal.
-        glRotatef(anguloCamaraY, 0.0f, 1.0f, 0.0f);
-        // eje vertical.
-        glRotatef(anguloCamaraX,1.0f,0.0f,0.0f);
-    } else {
-        gluLookAt(-5,10,5,0,0,0,1,12,4);
-    }
-
-  glScalef(20, 20, 20);
-
 
   glDrawArrays(GL_POINTS, 0, num_fish);
 
@@ -815,8 +751,8 @@ void RenderFunction(void)
 void IdleFunction(void)
 {
 
-	  CreateShaders();
-	  CreateVBO();
+  	CreateShaders();
+	CreateVBO();
 
 	glClearColor(0,0,0,0);
   	//glClearColor(0.071f, 0.741f, 0.843f, 0.0f);
@@ -996,72 +932,11 @@ void DestroyShaders(void)
 void processNormalKeys(unsigned char key, int x, int y) {
 
     switch(key) {
-	// SELECCIONAR LA perspectiva
-	    case 'p':
-	    case 'P':
-	        perspectiva=1;																																											
-	        ResizeFunction(400,400);
-	        RenderFunction();
-	        break;
-
-	    case 'o':
-	    case 'O':
-	        perspectiva=0;
-	        ResizeFunction(400,400);
-	        RenderFunction();
-	        break;
-
-	// ROTAR CAMARA LA DERECHA
-	    case '1':
-	        anguloCamaraY++;
-	        printf("Angulo de rotacion de la camara en torno al eje Y: %i \n",((int)anguloCamaraY % 360));
-	        RenderFunction();
-	        break;
-	// ROTAR CAMARA LA IZQUIERDA																																										
-	    case '2':
-	        anguloCamaraY--;
-	        printf("Angulo de rotacion de la camara en torno al eje Y: %i \n",((int)anguloCamaraY % 360));
-	        RenderFunction();
-	        break;
-	// ROTAR CAMARA HACIA ARRIBA
-	    case '3':
-	        anguloCamaraX++;
-	        printf("Angulo de rotacion de la camara en torno al eje X: %i \n",((int)anguloCamaraX % 360));
-	        RenderFunction();
-	        break;
-	// ROTAR CAMARA HACIA ABAJO
-	    case '4':
-	        anguloCamaraX--;
-	        printf("Angulo de rotacion de la camara en torno al eje X: %i \n",((int)anguloCamaraX % 360));
-	        RenderFunction();
-	        break;
-	    case '5':
-	        posObjeto++;																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																							
-	        RenderFunction();
-	        break;
-	    case '6':
-	        posObjeto--;
-	        RenderFunction();
-	        break;
-	    case '7':
-	        if (lookAt==0){
-	            lookAt=1;
-	        }else{
-	            lookAt=0;
-	        }
-	        RenderFunction();
-	        break;
 	    case 27: // escape
 	        exit(0);
 	        break;
-	    
-		}
-
+   		}
 }
-
-
-
-
 
 int main( int argc, char** argv ){
 
@@ -1080,159 +955,11 @@ int main( int argc, char** argv ){
 	par = argv[4]; str2num( par, wa);
 	par = argv[5]; str2num( par, wo);
 
-	// //Initialization of values
-	// // SchoolFish<p2D> myschool( num_fish );
-	// SchoolFish<p3D> myschool( num_fish );
-	// myschool.init(wa,wo);
-
-	// globalschool = myschool;
-	// // myschool.print();
-
-	//globalsize = 10000;
-
-    //ofstream result("movement_cuda.data");
-
-    // timer[1] = time(0); 
-    // cout <<"\nTiempo Inicializacio\'n: " << difftime(timer[1], timer[0]) << endl;
-
-    // timer[2] = 0;
-    // timer[3] = 0;
-    // timer[4] = 0;
-
-    
-
     Initialize(argc, argv);
 
-  glutMainLoop();
+	glutMainLoop();
   
-  exit(EXIT_SUCCESS);
-
-
-  // GLenum GlewInitResult;
-
-  // glutInit(&argc, argv);
-  
-  // glutInitContextVersion(4, 0);
-  // glutInitContextFlags(GLUT_FORWARD_COMPATIBLE);
-  // glutInitContextProfile(GLUT_CORE_PROFILE);
-
-  // glutSetOption(
-  //   GLUT_ACTION_ON_WINDOW_CLOSE,
-  //   GLUT_ACTION_GLUTMAINLOOP_RETURNS
-  // );
-  
-  // glutInitWindowSize(CurrentWidth, CurrentHeight);
-
-  // glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
-
-  // WindowHandle = glutCreateWindow(WINDOW_TITLE_PREFIX);
-
-  // if(WindowHandle < 1) {
-  //   fprintf(
-  //     stderr,
-  //     "ERROR: Could not create a new rendering window.\n"
-  //   );
-  //   exit(EXIT_FAILURE);
-  // }
-  // // glutReshapeFunc(ResizeFunction);
-
-	// for( int i = 0; i < iter; ++i){
-		// cout << i << endl;
-		// myschool.print_distances();
-		// timer[0] = time(0); 
-		// myschool.movement(t);
-		// timer[1] = time(0); 
-
-		// // cout <<"\nTiempo Movimiento " << difftime(timer[1], timer[0]) << endl;
-
-		// timer[2] += difftime(timer[1], timer[0]);
-
-		// timer[0] = time(0);
-		// myschool.calc_neighboors(k);
-		// timer[1] = time(0);
-
-		// // cout <<"\nTiempo Calc Vecinos " << difftime(timer[1], timer[0]) << endl;
-
-		// timer[3] += difftime(timer[1], timer[0]);
-
-		// // myschool.print_neighboors();
-		// timer[0] = time(0); 
-		// myschool.update_c();
-		// timer[1] = time(0);
-
-		// // cout <<"\nTiempo Act Pos " << difftime(timer[1], timer[0]) << endl;
-
-		// timer[4] += difftime(timer[1], timer[0]);
-
-		// // myschool.print();
-		// myschool.print2file( result, 2);
-
-		// myschool.passtoptr();
-
-		
-		// glutDisplayFunc(RenderFunction);
-		// glutIdleFunc(IdleFunction);
-
-		// glutKeyboardFunc(processNormalKeys);
-		// // glutSpecialFunc(processSpecialKeys);
-	  
-		// glutTimerFunc(0, TimerFunction, 0);
-	 //  	// glutCloseFunc(Cleanup);
-	  
-	 //  	glewExperimental = GL_TRUE;
-	 //  	GlewInitResult = glewInit();
-
-	 //  	if (GLEW_OK != GlewInitResult) {
-	 //    	fprintf(
-	 //    	  	stderr,
-		//       	"ERROR: %s\n",
-		//       	glewGetErrorString(GlewInitResult)
-	 //    		);
-	 //    	exit(EXIT_FAILURE);
-	 //  	}
-	  
-	 //  	fprintf(
-		//     stdout,
-		//     "INFO: OpenGL Version: %s\n",
-		//     glGetString(GL_VERSION)
-	 //  	);
-
-		// CreateShaders();
-		// CreateVBO();
-
-		// glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-
-		// // glFinish();
-
-
-		// glutMainLoop();	
-
-		// exit(EXIT_SUCCESS);
-	// }
-
-
-
-
-
-	// cout <<"\nTiempo T Movimiento " << timer[2] << endl;
-	// cout <<"\nTiempo T Calc Vecinos  " << timer[3] << endl;
-	// cout <<"\nTiempo T Act Pos " << timer[4] << endl;
-
-	// result.close();	
-
-
-
-	// for( int i = 0; i < myschool.schoolfish.size(); ++i){
-	// 	cout << data[i].XYZW[0] << "\t" << data[i].XYZW[1] << "\t" << data[i].XYZW[2] << "\t" << data[i].XYZW[3] << "\t"
-	// 		 << data[i].RGBA[0] << "\t" << data[i].RGBA[1] << "\t" << data[i].RGBA[2] << "\t" << data[i].RGBA[3] << "\n" ;
-	// }
-
-	// Initialize(argc, argv);
-
- //  	glutMainLoop();
-  
- //  	exit(EXIT_SUCCESS);
-
+  	exit(EXIT_SUCCESS);
 
 	return 0;
 }
